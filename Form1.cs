@@ -10,7 +10,7 @@ namespace RayTracing2._0
     public partial class Form1 : Form
     {
 
-        private Size canvasSize;
+        private Size _canvasSize;
         private Timer _timer = new Timer() {Interval = 1};
         private SizeF _viewMatrix;
         private Vector _camera = new Vector(0, 0, 0);
@@ -22,7 +22,7 @@ namespace RayTracing2._0
             new Sphere(new Vector(0, -5001, 0), 5000, VecColor.FromColor(Color.Yellow)),
         };
 
-        private List<Light> Lights = new List<Light>()
+        private List<Light> _lights = new List<Light>()
         {
             new Light(new Vector(2, 1, 0), VecColor.FromColor(Color.White), 0.75),
             //new Light(new Vector(-1, 2, -1), VecColor.FromColor(Color.LightYellow), 0.75)
@@ -36,19 +36,19 @@ namespace RayTracing2._0
             
             
             // WindowState = FormWindowState.Maximized;
-            canvasSize = new Size(pictureBox.Width, pictureBox.Height);
-             _viewMatrix =UpdateViewSize(canvasSize.Width, canvasSize.Height);
+            _canvasSize = new Size(pictureBox.Width, pictureBox.Height);
+             _viewMatrix =UpdateViewSize(_canvasSize.Width, _canvasSize.Height);
             //_viewCanvas = new SizeF(2, 2);
             pictureBox.SizeChanged += (sender, args) =>
             {
-                canvasSize = new Size(pictureBox.Width, pictureBox.Height);
-                _viewMatrix = UpdateViewSize(canvasSize.Width, canvasSize.Height);
+                _canvasSize = new Size(pictureBox.Width, pictureBox.Height);
+                _viewMatrix = UpdateViewSize(_canvasSize.Width, _canvasSize.Height);
             };
             _timer.Tick += async (sender, args) =>
             {
                 _timer.Enabled = false;
-                var newCanvasSize = new Size(canvasSize.Width, canvasSize.Height);
-                if (canvasSize.Width != 0 && canvasSize.Height != 0)
+                var newCanvasSize = new Size(_canvasSize.Width, _canvasSize.Height);
+                if (_canvasSize.Width != 0 && _canvasSize.Height != 0)
                 {
                     var image = await UpdateCanvasAsync(newCanvasSize);
                     pictureBox.Image = image;
@@ -66,20 +66,20 @@ namespace RayTracing2._0
                 : new SizeF(1, (float) height * 1 / width);
         }
 
-        private Task<Bitmap> UpdateCanvasAsync(Size canvasSize)
+        private Task<Bitmap> UpdateCanvasAsync(Size localCanvasSize)
         {
             var task = new Task<Bitmap>(() =>
             {
                 var camera = new Vector(_camera.X, _camera.Y, _camera.Z);
                 
-                var canvas = new Bitmap(canvasSize.Width, canvasSize.Height);
+                var canvas = new Bitmap(localCanvasSize.Width, localCanvasSize.Height);
                 var canvasHeight = canvas.Height;
 
                 Parallel.For(-canvas.Width / 2, canvas.Width / 2, x =>
                 {
                     for (int y = -canvasHeight / 2 + 1; y < canvasHeight / 2; y++)
                     {
-                        var viewPortPosition = CanvasToViewport(x, y);
+                        var viewPortPosition = CanvasToViewport(x, y) + camera;
                         var result = TraceRay(camera, viewPortPosition, 0.001, double.PositiveInfinity, 5);
                         if(result.Success)
                         {
@@ -99,8 +99,8 @@ namespace RayTracing2._0
         private Vector CanvasToViewport(int x, int y)
         {
             return new Vector(
-                x * (double)_viewMatrix.Width / (double)canvasSize.Width,
-                y * (double)_viewMatrix.Height / (double)canvasSize.Height,
+                x * (double) _viewMatrix.Width / _canvasSize.Width,
+                y * (double)_viewMatrix.Height / _canvasSize.Height,
                 _lenghtToNearBorder
             );
         }
@@ -145,7 +145,7 @@ namespace RayTracing2._0
         private VecColor FindDiffuseLight(Vector normalVector, Vector crossPoint, Sphere selectedSphere)
         {
             var sum = new VecColor(0, 0, 0);
-            foreach (var light in Lights)
+            foreach (var light in _lights)
             {
                 var lightNormalVector = light.Location - crossPoint;
                 var normalLightUnitVector = lightNormalVector / lightNormalVector.Lenght;
