@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Timer = System.Windows.Forms.Timer;
 
 namespace RayTracing2._0
 {
@@ -11,143 +12,316 @@ namespace RayTracing2._0
 
         private Size canvasSize;
         private Timer _timer = new Timer() {Interval = 1};
-        private Size _viewCanvas = new Size(1, 1);
+        private SizeF _viewMatrix;
+        private Vector _camera = new Vector(0, 0, 0);
         private List<Sphere> _spheres = new List<Sphere>()
         {
-            new Sphere(new Point3D(1, 1, 3), 0.5, Color.Brown)
+            new Sphere(new Vector(0, -1, 3), 1, VecColor.FromColor(Color.Red)),
+            new Sphere(new Vector(-2, 0, 4), 1, VecColor.FromColor(Color.Blue)),
+            new Sphere(new Vector(2, 0, 4), 1, VecColor.FromColor(Color.Green)),
+            new Sphere(new Vector(0, -5001, 0), 5000, VecColor.FromColor(Color.Yellow)),
+        };
+
+        private List<Light> Lights = new List<Light>()
+        {
+            new Light(new Vector(2, 1, 0), VecColor.FromColor(Color.White), 0.75),
+            //new Light(new Vector(-1, 2, -1), VecColor.FromColor(Color.LightYellow), 0.75)
         };
 
         public Form1()
         {
             InitializeComponent();
             DoubleBuffered = true;
+            pictureBox.KeyDown += NavigateCamera;
+            
+            
             // WindowState = FormWindowState.Maximized;
             canvasSize = new Size(pictureBox.Width, pictureBox.Height);
+             _viewMatrix =UpdateViewSize(canvasSize.Width, canvasSize.Height);
+            //_viewCanvas = new SizeF(2, 2);
             pictureBox.SizeChanged += (sender, args) =>
             {
                 canvasSize = new Size(pictureBox.Width, pictureBox.Height);
+                _viewMatrix = UpdateViewSize(canvasSize.Width, canvasSize.Height);
             };
             _timer.Tick += async (sender, args) =>
             {
-                var image = await UpdateCanvasAsync();
-                pictureBox.Image = image;
+                _timer.Enabled = false;
+                var newCanvasSize = new Size(canvasSize.Width, canvasSize.Height);
+                if (canvasSize.Width != 0 && canvasSize.Height != 0)
+                {
+                    var image = await UpdateCanvasAsync(newCanvasSize);
+                    pictureBox.Image = image;
+                }
+                _timer.Enabled = true;
             };
             
             _timer.Start();
         }
-        
-        private Task<Bitmap> UpdateCanvasAsync()
+
+        private SizeF UpdateViewSize(int width, int height)
+        {
+            return height > width
+                ? new SizeF((float) width * 1 / height, 1)
+                : new SizeF(1, (float) height * 1 / width);
+        }
+
+        private Task<Bitmap> UpdateCanvasAsync(Size canvasSize)
         {
             var task = new Task<Bitmap>(() =>
             {
-                var camera = new Point3D(0.0, 0.0, 0.0);
-                var canvas = new Bitmap(this.canvasSize.Width, this.canvasSize.Height);
-                for (int x = 0; x < canvas.Width; x++)
+                var camera = new Vector(_camera.X, _camera.Y, _camera.Z);
+                
+                var canvas = new Bitmap(canvasSize.Width, canvasSize.Height);
+                var canvasHeight = canvas.Height;
+
+                Parallel.For(-canvas.Width / 2, canvas.Width / 2, x =>
                 {
-                    Parallel.For(0, canvas.Height, y =>
+                    for (int y = -canvasHeight / 2 + 1; y < canvasHeight / 2; y++)
                     {
                         var viewPortPosition = CanvasToViewport(x, y);
-                        var color = TraceRay(camera, viewPortPosition, 1, Double.PositiveInfinity);
-                        lock (canvas)
+                        var result = TraceRay(camera, viewPortPosition, 0.001, double.PositiveInfinity, 5);
+                        if(result.Success)
                         {
-                            canvas.SetPixel(x, y, color);
+                            lock (canvas)
+                            {
+                                canvas.SetPixel(x + canvas.Width / 2, canvas.Height / 2 - y, result.VecColor.ToColor());
+                            }
                         }
-                    });
-                    // for (int y = 0; y < canvas.Height; y++)
-                    // {
-                    //     var viewPortPosition = CanvasToViewport(x, y);
-                    //     var color = TraceRay(camera, viewPortPosition, 1, Double.PositiveInfinity);
-                    //     canvas.SetPixel(x, y, color);
-                    // }
-                }
+                    }
+                });
                 return canvas;
             });
             task.Start();
             return task;
         }
-
-        // private void UpdateCanvas()
-        // {
-        //     var camera = new Point3D(0.0, 0.0, 0.0);
-        //     for (int x = 0; x < _canvas.Width; x++)
-        //     {
-        //         for (int y = 0; y < _canvas.Height; y++)
-        //         {
-        //             var viewPortPosition = CanvasToViewport(x, y);
-        //             var color = TraceRay(camera, viewPortPosition, 1, Double.PositiveInfinity);
-        //             _canvas.SetPixel(x, y, color);
-        //         }
-        //     }
-        //     pictureBox.Image = _canvas;
-        // }
         
-        private Point3D CanvasToViewport(int x, int y)
+        private Vector CanvasToViewport(int x, int y)
         {
-            return new Point3D(
-                x * (double)_viewCanvas.Width / canvasSize.Width,
-                y * (double)_viewCanvas.Height / canvasSize.Height,
+            return new Vector(
+                x * (double)_viewMatrix.Width / (double)canvasSize.Width,
+                y * (double)_viewMatrix.Height / (double)canvasSize.Height,
                 _lenghtToNearBorder
             );
         }
 
-        private Color TraceRay(Point3D camera, Point3D viewPortPosition, int tMin, double tMax)
+        private RayTraceResult TraceRay(Vector fromPoint, Vector directionPoint, double tMin, double tMax, int iterationCount)
         {
-            Sphere closestSphere = null;
+            if (iterationCount == 0)
+                return RayTraceResult.Fail;
+            
+            iterationCount--;
+            
+            var crossObject = FindCrossObject(fromPoint, directionPoint, tMin, tMax, out var crossPoint);
+
+            if (crossObject == null)
+                return RayTraceResult.Fail;
+
+            var normalUnitVector = crossObject.GetNormalUnitVector(crossPoint);
+            var resultColor = GlobalLightningParameters.BackgroundLight
+                              + FindDiffuseLight(normalUnitVector, crossPoint, crossObject)
+                              + FindReflectLight(normalUnitVector, crossPoint, tMin, tMax, iterationCount);
+            resultColor = resultColor ^ crossObject.Color;
+            return new RayTraceResult(true, crossObject, crossPoint, resultColor);
+        }
+
+        private VecColor FindReflectLight(Vector normalUnitVector, Vector crossPoint, double tMin, double tMax, int iterationCount)
+        {
+            var normalizeCrossPoint = crossPoint / crossPoint.Lenght;
+            var newPoint = normalizeCrossPoint - 2.0 * normalUnitVector * Vector.DotProduct(normalUnitVector, normalizeCrossPoint);
+            var rayTraceResult = TraceRay(crossPoint, newPoint, tMin, tMax, iterationCount);
+            
+            if (rayTraceResult.Success)
+            {
+                return rayTraceResult.VecColor
+                       * GlobalLightningParameters.ReflectedBeamRatio 
+                       * Math.Pow(Math.E, -1 * (crossPoint - rayTraceResult.CrossPoint).Lenght);
+            }
+            
+            return VecColor.Empty;
+        }
+
+
+        private VecColor FindDiffuseLight(Vector normalVector, Vector crossPoint, Sphere selectedSphere)
+        {
+            var sum = new VecColor(0, 0, 0);
+            foreach (var light in Lights)
+            {
+                var lightNormalVector = light.Location - crossPoint;
+                var normalLightUnitVector = lightNormalVector / lightNormalVector.Lenght;
+                var cosBetween = Vector.DotProduct(normalVector, normalLightUnitVector);
+                if(cosBetween <= 0 || AnyObjectBetween(crossPoint, light.Location, selectedSphere))
+                    continue;
+                var lightIntensity = light.Intensity * light.Color * (cosBetween >= 0 ? cosBetween : 0);
+                
+                sum =  sum + lightIntensity;
+            }
+
+            return GlobalLightningParameters.DiffusionIlluminationCoefficient * sum;
+        }
+
+        private bool AnyObjectBetween(Vector firstPoint, Vector secondPoint, Sphere selectedSphere)
+        {
+            var cos = (float) Vector.CosBetween(firstPoint, secondPoint);
             foreach (var sphere in _spheres)
             {
-                (var t1, var t2) = IntersectRaySphere(camera, viewPortPosition, sphere);
-                if (t1 > tMin && t2 < tMax && t1 < Double.PositiveInfinity)
+                if(sphere != selectedSphere && IntersectRaySphere(firstPoint, secondPoint, sphere, out var result))
                 {
-                    tMax = t1;
-                    closestSphere = sphere;
-                }
-                if (t2 > tMin && t2 < tMax && t2 < Double.PositiveInfinity)
-                {
-                    tMax = t2;
-                    closestSphere = sphere;
+                    var minT = Math.Min(result.Item1, result.Item2);
+                    var crossPoint  = firstPoint + secondPoint * minT;
+                    if (PointBetween(crossPoint, firstPoint, secondPoint, cos))
+                        return true;
                 }
             }
 
-            if (closestSphere == null)
-                return BackColor;
-            return closestSphere.Color;
+            return false;
         }
 
-        private (double, double) IntersectRaySphere(Point3D camera, Point3D viewPortPosition, Sphere sphere)
+        private bool PointBetween(Vector crossPoint, Vector firstPoint, Vector secondPoint, float cos)
         {
-            var sphereCenter = sphere.Center;
-            var r = sphere.Radius;
-            var oc = camera - sphereCenter;
+            var cosBetween = (float) Vector.CosBetween(crossPoint, firstPoint);
+            var between = (float) Vector.CosBetween(crossPoint, secondPoint);
+            if(cos <= cosBetween && cos <= between)
+                Console.WriteLine();
+            return cos < cosBetween && cos < between;
+        }
 
-            var k1 = Point3D.Distance(viewPortPosition, viewPortPosition);
-            var k2 = 2 * Point3D.Distance(oc, viewPortPosition);
-            var k3 = Point3D.Distance(oc, oc) - r * r;
+        private Sphere FindCrossObject(Vector fromPoint, Vector toPoint, double tMin, double tMax, out Vector crossPoint)
+        {
+            Sphere closestSphere = null;
+            var wasCross = false;
+            foreach (var sphere in _spheres)
+            {
+                if(IntersectRaySphere(fromPoint, toPoint, sphere, out var result))
+                {
+                    var (t1, t2) = result;
+                    if (ValidLength(tMin, tMax, t1))
+                    {
+                        tMax = t1;
+                        closestSphere = sphere;
+                        wasCross = true;
+                    }
+
+                    if (ValidLength(tMin, tMax, t2))
+                    {
+                        tMax = t2;
+                        closestSphere = sphere;
+                        wasCross = true;
+                    }
+                }
+            }
+            if(wasCross)
+            {
+                crossPoint = fromPoint + toPoint * tMax;
+            }
+            else
+            {
+                crossPoint = null;
+            }
+
+            return closestSphere;
+        }
+
+        private static bool ValidLength(double tMin, double tMax, double t)
+        {
+            return t >= tMin && t <= tMax && t < double.PositiveInfinity;
+        }
+
+        private bool IntersectRaySphere(Vector startRay, Vector pointOnRay, Sphere sphere, out (double, double) result)
+        {
+            var r = sphere.Radius;
+            var oc = startRay - sphere.Center;
+
+            var k1 = Vector.DotProduct(pointOnRay, pointOnRay);
+            var k2 = 2 * Vector.DotProduct(oc, pointOnRay);
+            var k3 = Vector.DotProduct(oc, oc) - r * r;
 
             var discriminant = k2 * k2 - 4 * k1 * k3;
             if (discriminant < 0)
             {
-                return (double.PositiveInfinity, double.PositiveInfinity);
+                result = (double.PositiveInfinity, double.PositiveInfinity);
+                return false;
             }
 
             var t1 = (-k2 + Math.Sqrt(discriminant)) / (2 * k1);
             var t2 = (-k2 - Math.Sqrt(discriminant)) / (2 * k1);
-            return (t1, t2);
+            result = (t1, t2);
+            return true;
         }
 
         private double _lenghtToNearBorder = 1;
+
+        private void trackBar1_Scroll(object sender, EventArgs e)
+        {
+            _lenghtToNearBorder = trackBar1.Value / 10d;
+        }
+
+        private void pictureBox_Click(object sender, EventArgs e)
+        {
+            pictureBox.Focus();
+        }
+        
+        
+        private void NavigateCamera(object sender, KeyEventArgs e)
+        {
+            var d = 0.2;
+            switch (e.KeyCode)
+            {
+                case Keys.A:
+                {
+                    _camera = new Vector(_camera.X - d, _camera.Y, _camera.Z);
+                    return;
+                }
+                case Keys.D:
+                {
+                    _camera = new Vector(_camera.X + d, _camera.Y, _camera.Z);
+                    return;
+                }
+                case Keys.W:
+                {
+                    _camera = new Vector(_camera.X, _camera.Y - d, _camera.Z);
+                    return;
+                }
+                case Keys.S:
+                {
+                    _camera = new Vector(_camera.X , _camera.Y + d, _camera.Z);
+                    return;
+                }
+            }
+        }
+
+        private void trackBar2_Scroll_1(object sender, EventArgs e)
+        {
+            GlobalLightningParameters.BackgroundIlluminationRatio = trackBar2.Value / 50d;
+        }
+
+        private void trackBar3_Scroll(object sender, EventArgs e)
+        {
+            GlobalLightningParameters.DiffusionIlluminationCoefficient = trackBar3.Value / 50d;
+        }
+
+
+        private void trackBar4_Scroll(object sender, EventArgs e)
+        {
+            GlobalLightningParameters.ReflectedBeamRatio = trackBar4.Value / 50d;
+        }
     }
 
-    public class Sphere
+    internal class RayTraceResult
     {
-        public Point3D Center;
-        public double Radius;
-        public Color Color;
+        public bool Success;
+        public Sphere CrossObject;
+        public Vector CrossPoint;
+        public VecColor VecColor;
 
-        public Sphere(Point3D center, double radius, Color color)
+        public RayTraceResult(bool success, Sphere crossObject = null, Vector crossPoint = null, VecColor vecColor = null)
         {
-            Center = center;
-            Radius = radius;
-            Color = color;
+            Success = success;
+            CrossObject = crossObject;
+            CrossPoint = crossPoint;
+            VecColor = vecColor;
         }
+
+        public static RayTraceResult Fail => new RayTraceResult(false);
     }
 }
