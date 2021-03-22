@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Timer = System.Windows.Forms.Timer;
@@ -13,18 +14,19 @@ namespace RayTracing2._0
         private Size _canvasSize;
         private Timer _timer = new Timer() {Interval = 1};
         private SizeF _viewMatrix;
-        private Vector _camera = new Vector(0, 0, 0);
+        private Vector3 _camera = new Vector3(0, 0, 0);
         private List<Sphere> _spheres = new List<Sphere>()
         {
-            new Sphere(new Vector(0, -1, 3), 1, VecColor.FromColor(Color.Red)),
-            new Sphere(new Vector(-2, 0, 4), 1, VecColor.FromColor(Color.Blue)),
-            new Sphere(new Vector(2, 0, 4), 1, VecColor.FromColor(Color.Green)),
-            new Sphere(new Vector(0, -5001, 0), 5000, VecColor.FromColor(Color.Yellow)),
+            new Sphere(new Vector3(0, -1, 3), 1, VecColor.FromColor(Color.Red)),
+            new Sphere(new Vector3(-2, 0, 4), 1, VecColor.FromColor(Color.Blue)),
+            new Sphere(new Vector3(2, 0, 4), 1, VecColor.FromColor(Color.Purple)),
+            new Sphere(new Vector3(0, -5001, 0), 5000, VecColor.FromColor(Color.White)),
         };
 
         private List<Light> _lights = new List<Light>()
         {
-            new Light(new Vector(2, 1, 0), VecColor.FromColor(Color.White), 0.75),
+            //new Light(new Vector3(4, 2, 0), VecColor.FromColor(Color.White), 0.6),
+            new Light(new Vector3(-4, 2, 0), VecColor.FromColor(Color.White), 0.6),
             //new Light(new Vector(-1, 2, -1), VecColor.FromColor(Color.LightYellow), 0.75)
         };
 
@@ -70,22 +72,29 @@ namespace RayTracing2._0
         {
             var task = new Task<Bitmap>(() =>
             {
-                var camera = new Vector(_camera.X, _camera.Y, _camera.Z);
+                var camera = new Vector3(_camera.X, _camera.Y, _camera.Z);
                 
-                var canvas = new Bitmap(localCanvasSize.Width, localCanvasSize.Height);
+                var canvas = new Bitmap(localCanvasSize.Width, localCanvasSize.Height, PixelFormat.Format32bppArgb);
                 var canvasHeight = canvas.Height;
-
-                Parallel.For(-canvas.Width / 2, canvas.Width / 2, x =>
+                var canvasWidth = canvas.Width;
+                var any = new HashSet<int>();
+                
+                Parallel.For(-canvasWidth / 2, canvasWidth / 2, x =>
                 {
+                    var dx = x + canvasWidth / 2;
+
+
                     for (int y = -canvasHeight / 2 + 1; y < canvasHeight / 2; y++)
                     {
                         var viewPortPosition = CanvasToViewport(x, y) + camera;
                         var result = TraceRay(camera, viewPortPosition, 0.001, double.PositiveInfinity, 5);
                         if(result.Success)
                         {
+                            var dy = canvasHeight / 2 - y;
+                            var color = result.VecColor.ToColor();
                             lock (canvas)
                             {
-                                canvas.SetPixel(x + canvas.Width / 2, canvas.Height / 2 - y, result.VecColor.ToColor());
+                                canvas.SetPixel(dx, dy, color);
                             }
                         }
                     }
@@ -96,39 +105,125 @@ namespace RayTracing2._0
             return task;
         }
         
-        private Vector CanvasToViewport(int x, int y)
+        private Vector3 CanvasToViewport(int x, int y)
         {
-            return new Vector(
+            return new Vector3(
                 x * (double) _viewMatrix.Width / _canvasSize.Width,
                 y * (double)_viewMatrix.Height / _canvasSize.Height,
                 _lenghtToNearBorder
             );
         }
 
-        private RayTraceResult TraceRay(Vector fromPoint, Vector directionPoint, double tMin, double tMax, int iterationCount)
+        private RayTraceResult TraceRay(Vector3 fromPoint, Vector3 directionPoint, double tMin, double tMax, int iterationCount)
         {
             if (iterationCount == 0)
                 return RayTraceResult.Fail;
             
             iterationCount--;
             
-            var crossObject = FindCrossObject(fromPoint, directionPoint, tMin, tMax, out var crossPoint);
+            var (crossObject, crossPoint) = FindCrossWithScene(fromPoint, directionPoint, tMin, tMax);
 
             if (crossObject == null)
                 return RayTraceResult.Fail;
 
             var normalUnitVector = crossObject.GetNormalUnitVector(crossPoint);
-            var resultColor = GlobalLightningParameters.BackgroundLight
-                              + FindDiffuseLight(normalUnitVector, crossPoint, crossObject)
-                              + FindReflectLight(normalUnitVector, crossPoint, tMin, tMax, iterationCount);
-            resultColor = resultColor ^ crossObject.Color;
+            var resultColor = new ReflectionLight(
+                FindDiffusedLight(normalUnitVector, crossPoint, crossObject, iterationCount), 
+                FindReflectLight(normalUnitVector, crossPoint, tMin, tMax, iterationCount),
+                VecColor.Empty);
             return new RayTraceResult(true, crossObject, crossPoint, resultColor);
         }
+        
+        private (ISceneObject, Vector3) FindCrossWithScene(Vector3 fromPoint, Vector3 toPoint, double tMin, double tMax)
+        {
+            ISceneObject sceneObject = null;
+            var ray = new Ray(fromPoint, toPoint);
+            foreach (var sphere in _spheres)
+            {
+                foreach (var rayCoef in sphere.FindIntersectsRay(ray))
+                {
+                    if (IsValidLength(tMin, tMax, rayCoef))
+                    {
+                        tMax = rayCoef;
+                        sceneObject = sphere;
+                    }
+                }
+            }
 
-        private VecColor FindReflectLight(Vector normalUnitVector, Vector crossPoint, double tMin, double tMax, int iterationCount)
+            if (sceneObject == null)
+                return (null, null);
+            
+            return (sceneObject, ray.GetPointFromCoefficient(tMax));
+        }
+        
+        private static bool IsValidLength(double tMin, double tMax, double t)
+        {
+            return t >= tMin && t <= tMax && t < double.PositiveInfinity;
+        }
+
+        private VecColor FindDiffusedLight(Vector3 normalVector3, Vector3 crossPoint, ISceneObject sceneObject, int remainingIterations)
+        {
+            var sum = new VecColor(0, 0, 0);
+            foreach (var light in _lights)
+            {
+                var lightNormalVector = light.Location - crossPoint;
+                var normalLightUnitVector = lightNormalVector / lightNormalVector.Lenght;
+                var cosBetween = Vector3.DotProduct(normalVector3, normalLightUnitVector);
+                if(cosBetween <= 0)
+                    continue;
+                var (crossObject, newCrossPoint) = FindCrossWithScene(crossPoint, light.Location, 0.01, lightNormalVector.Lenght);
+
+                if (crossObject != null)
+                    continue;
+                // var rayTraceResult = TraceRay(crossPoint, light.Location, 0.01, lightNormalVector.Lenght,
+                //     1);
+                // if(rayTraceResult.Success)
+                //     continue;
+                // VecColor lightIntensity;
+                // if (rayTraceResult.Success)
+                // {
+                //     lightIntensity = rayTraceResult.ReflectionLight.ReflectColor * cosBetween;
+                // }
+                // else
+                // {
+                //     lightIntensity = light.Intensity * light.Color * cosBetween;
+                // }
+                var lightIntensity = light.Intensity * light.Color * cosBetween;
+                sum += lightIntensity;
+            }
+
+            return GlobalLightningParameters.DiffusionIlluminationCoefficient * sum;
+        }
+
+        private bool AnyObjectBetween(Vector3 firstPoint, Vector3 secondPoint, ISceneObject sceneObject)
+        {
+            var cos = (float) Vector3.CosBetween(firstPoint, secondPoint);
+            foreach (var sphere in _spheres)
+            {
+                if(sphere != sceneObject)
+                {
+                    
+                    // var minT = Math.Min(result.Item1, result.Item2);
+                    // var crossPoint  = firstPoint + secondPoint * minT;
+                    // if (PointBetween(crossPoint, firstPoint, secondPoint, cos))
+                    //     return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool PointBetween(Vector3 crossPoint, Vector3 firstPoint, Vector3 secondPoint, float cos)
+        {
+            var cosBetween = (float) Vector3.CosBetween(crossPoint, firstPoint);
+            var between = (float) Vector3.CosBetween(crossPoint, secondPoint);
+            return cos <= cosBetween && cos <= between;
+        }
+
+        private VecColor FindReflectLight(Vector3 normalUnitVector3, Vector3 crossPoint, double tMin, double tMax, int iterationCount)
         {
             var normalizeCrossPoint = crossPoint / crossPoint.Lenght;
-            var newPoint = normalizeCrossPoint - 2.0 * normalUnitVector * Vector.DotProduct(normalUnitVector, normalizeCrossPoint);
+            var newPoint = normalizeCrossPoint - 2.0 * normalUnitVector3 * Vector3.DotProduct(normalUnitVector3, normalizeCrossPoint);
             var rayTraceResult = TraceRay(crossPoint, newPoint, tMin, tMax, iterationCount);
             
             if (rayTraceResult.Success)
@@ -139,114 +234,6 @@ namespace RayTracing2._0
             }
             
             return VecColor.Empty;
-        }
-
-
-        private VecColor FindDiffuseLight(Vector normalVector, Vector crossPoint, Sphere selectedSphere)
-        {
-            var sum = new VecColor(0, 0, 0);
-            foreach (var light in _lights)
-            {
-                var lightNormalVector = light.Location - crossPoint;
-                var normalLightUnitVector = lightNormalVector / lightNormalVector.Lenght;
-                var cosBetween = Vector.DotProduct(normalVector, normalLightUnitVector);
-                if(cosBetween <= 0 || AnyObjectBetween(crossPoint, light.Location, selectedSphere))
-                    continue;
-                var lightIntensity = light.Intensity * light.Color * (cosBetween >= 0 ? cosBetween : 0);
-                
-                sum =  sum + lightIntensity;
-            }
-
-            return GlobalLightningParameters.DiffusionIlluminationCoefficient * sum;
-        }
-
-        private bool AnyObjectBetween(Vector firstPoint, Vector secondPoint, Sphere selectedSphere)
-        {
-            var cos = (float) Vector.CosBetween(firstPoint, secondPoint);
-            foreach (var sphere in _spheres)
-            {
-                if(sphere != selectedSphere && IntersectRaySphere(firstPoint, secondPoint, sphere, out var result))
-                {
-                    var minT = Math.Min(result.Item1, result.Item2);
-                    var crossPoint  = firstPoint + secondPoint * minT;
-                    if (PointBetween(crossPoint, firstPoint, secondPoint, cos))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        private bool PointBetween(Vector crossPoint, Vector firstPoint, Vector secondPoint, float cos)
-        {
-            var cosBetween = (float) Vector.CosBetween(crossPoint, firstPoint);
-            var between = (float) Vector.CosBetween(crossPoint, secondPoint);
-            if(cos <= cosBetween && cos <= between)
-                Console.WriteLine();
-            return cos < cosBetween && cos < between;
-        }
-
-        private Sphere FindCrossObject(Vector fromPoint, Vector toPoint, double tMin, double tMax, out Vector crossPoint)
-        {
-            Sphere closestSphere = null;
-            var wasCross = false;
-            foreach (var sphere in _spheres)
-            {
-                if(IntersectRaySphere(fromPoint, toPoint, sphere, out var result))
-                {
-                    var (t1, t2) = result;
-                    if (ValidLength(tMin, tMax, t1))
-                    {
-                        tMax = t1;
-                        closestSphere = sphere;
-                        wasCross = true;
-                    }
-
-                    if (ValidLength(tMin, tMax, t2))
-                    {
-                        tMax = t2;
-                        closestSphere = sphere;
-                        wasCross = true;
-                    }
-                }
-            }
-            if(wasCross)
-            {
-                crossPoint = fromPoint + toPoint * tMax;
-            }
-            else
-            {
-                crossPoint = null;
-            }
-
-            return closestSphere;
-        }
-
-        private static bool ValidLength(double tMin, double tMax, double t)
-        {
-            return t >= tMin && t <= tMax && t < double.PositiveInfinity;
-        }
-
-        private bool IntersectRaySphere(Vector startRay, Vector pointOnRay, Sphere sphere, out (double, double) result)
-        {
-            var r = sphere.Radius;
-            var oc = startRay - sphere.Center;
-
-            var k1 = Vector.DotProduct(pointOnRay, pointOnRay);
-            var k2 = 2 * Vector.DotProduct(oc, pointOnRay);
-            var k3 = Vector.DotProduct(oc, oc) - r * r;
-
-            var discriminant = k2 * k2 - 4 * k1 * k3;
-            if (discriminant < 0)
-            {
-                result = (double.PositiveInfinity, double.PositiveInfinity);
-                return false;
-            }
-
-            var t1 = (-k2 + Math.Sqrt(discriminant)) / (2 * k1);
-            var t2 = (-k2 - Math.Sqrt(discriminant)) / (2 * k1);
-            result = (t1, t2);
-            return true;
         }
 
         private double _lenghtToNearBorder = 1;
@@ -269,22 +256,22 @@ namespace RayTracing2._0
             {
                 case Keys.A:
                 {
-                    _camera = new Vector(_camera.X - d, _camera.Y, _camera.Z);
+                    _camera = new Vector3(_camera.X - d, _camera.Y, _camera.Z);
                     return;
                 }
                 case Keys.D:
                 {
-                    _camera = new Vector(_camera.X + d, _camera.Y, _camera.Z);
+                    _camera = new Vector3(_camera.X + d, _camera.Y, _camera.Z);
                     return;
                 }
                 case Keys.W:
                 {
-                    _camera = new Vector(_camera.X, _camera.Y - d, _camera.Z);
+                    _camera = new Vector3(_camera.X, _camera.Y - d, _camera.Z);
                     return;
                 }
                 case Keys.S:
                 {
-                    _camera = new Vector(_camera.X , _camera.Y + d, _camera.Z);
+                    _camera = new Vector3(_camera.X , _camera.Y + d, _camera.Z);
                     return;
                 }
             }
@@ -305,23 +292,5 @@ namespace RayTracing2._0
         {
             GlobalLightningParameters.ReflectedBeamRatio = trackBar4.Value / 50d;
         }
-    }
-
-    internal class RayTraceResult
-    {
-        public bool Success;
-        public Sphere CrossObject;
-        public Vector CrossPoint;
-        public VecColor VecColor;
-
-        public RayTraceResult(bool success, Sphere crossObject = null, Vector crossPoint = null, VecColor vecColor = null)
-        {
-            Success = success;
-            CrossObject = crossObject;
-            CrossPoint = crossPoint;
-            VecColor = vecColor;
-        }
-
-        public static RayTraceResult Fail => new RayTraceResult(false);
     }
 }
