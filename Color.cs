@@ -80,10 +80,16 @@ namespace RayTracing2._0
             return c1 + coef;
         }
         
-        public static VecColor operator ^(VecColor c1, VecColor c2)
+        public static VecColor Intersection(VecColor c1, VecColor c2, double coef)
+        {
+            return new VecColor((int) (c1.R * coef + c2.R * (1 - coef)), (int) (c1.G * coef + c2.G * (1 - coef)), (int) (c1.B * coef + c2.B * (1 - coef)));
+        }
+        
+        public static VecColor Intersection( VecColor c1,  VecColor c2)
         {
             return new VecColor(GetMinRealColorValue(c1.R, c2.R), GetMinRealColorValue(c1.G, c2.G), GetMinRealColorValue(c1.B, c2.B));
         }
+
 
         private static int GetMinRealColorValue(int canal1, int canal2)
         {

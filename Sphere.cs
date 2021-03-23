@@ -24,12 +24,11 @@ namespace RayTracing2._0
 
         public IEnumerable<double> FindIntersectsRay(Ray ray)
         {
-            var r = Radius;
             var oc = ray.StartPoint - Center;
 
-            var k1 = Vector3.DotProduct(ray.DirectionPoint, ray.DirectionPoint);
-            var k2 = 2 * Vector3.DotProduct(oc, ray.DirectionPoint);
-            var k3 = Vector3.DotProduct(oc, oc) - r * r;
+            var k1 = Vector3.DotProduct(ray.TargetPoint, ray.TargetPoint);
+            var k2 = 2 * Vector3.DotProduct(oc, ray.TargetPoint);
+            var k3 = Vector3.DotProduct(oc, oc) - Radius * Radius;
 
             var discriminant = k2 * k2 - 4 * k1 * k3;
             if (discriminant < 0)

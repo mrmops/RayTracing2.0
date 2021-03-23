@@ -20,13 +20,14 @@ namespace RayTracing2._0
             new Sphere(new Vector3(0, -1, 3), 1, VecColor.FromColor(Color.Red)),
             new Sphere(new Vector3(-2, 0, 4), 1, VecColor.FromColor(Color.Blue)),
             new Sphere(new Vector3(2, 0, 4), 1, VecColor.FromColor(Color.Purple)),
-            new Sphere(new Vector3(0, -5001, 0), 5000, VecColor.FromColor(Color.White)),
+            new Sphere(new Vector3(0, -5001, 0), 5000, VecColor.FromColor(Color.Yellow)),
         };
 
         private List<Light> _lights = new List<Light>()
         {
             //new Light(new Vector3(4, 2, 0), VecColor.FromColor(Color.White), 0.6),
-            new Light(new Vector3(-4, 2, 0), VecColor.FromColor(Color.White), 0.6),
+            new PointLight(new Vector3(-4, 2, 0), VecColor.FromColor(Color.LightYellow), 0.6),
+            new DirectionLight(new Vector3(0, 4, -7), VecColor.FromColor(Color.White), 0.2),
             //new Light(new Vector(-1, 2, -1), VecColor.FromColor(Color.LightYellow), 0.75)
         };
 
@@ -79,7 +80,7 @@ namespace RayTracing2._0
                 var canvasWidth = canvas.Width;
                 var any = new HashSet<int>();
                 
-                Parallel.For(-canvasWidth / 2, canvasWidth / 2, x =>
+                for(var x = -canvasWidth / 2; x <canvasWidth / 2; x++)
                 {
                     var dx = x + canvasWidth / 2;
 
@@ -87,7 +88,7 @@ namespace RayTracing2._0
                     for (int y = -canvasHeight / 2 + 1; y < canvasHeight / 2; y++)
                     {
                         var viewPortPosition = CanvasToViewport(x, y) + camera;
-                        var result = TraceRay(camera, viewPortPosition, 0.001, double.PositiveInfinity, 5);
+                        var result = TraceRay(camera, viewPortPosition, 0.001, double.PositiveInfinity, 3);
                         if(result.Success)
                         {
                             var dy = canvasHeight / 2 - y;
@@ -98,7 +99,28 @@ namespace RayTracing2._0
                             }
                         }
                     }
-                });
+                }
+
+                // Parallel.For(-canvasWidth / 2, canvasWidth / 2, x =>
+                // {
+                //     var dx = x + canvasWidth / 2;
+                //
+                //
+                //     for (int y = -canvasHeight / 2 + 1; y < canvasHeight / 2; y++)
+                //     {
+                //         var viewPortPosition = CanvasToViewport(x, y) + camera;
+                //         var result = TraceRay(camera, viewPortPosition, 0.001, double.PositiveInfinity, 3);
+                //         if(result.Success)
+                //         {
+                //             var dy = canvasHeight / 2 - y;
+                //             var color = result.VecColor.ToColor();
+                //             lock (canvas)
+                //             {
+                //                 canvas.SetPixel(dx, dy, color);
+                //             }
+                //         }
+                //     }
+                // });
                 return canvas;
             });
             task.Start();
@@ -121,7 +143,7 @@ namespace RayTracing2._0
             
             iterationCount--;
             
-            var (crossObject, crossPoint) = FindCrossWithScene(fromPoint, directionPoint, tMin, tMax);
+            var (crossObject, crossPoint) = FindCrossWithScene(new SearchParameters(new Ray(fromPoint, directionPoint), tMin, tMax));
 
             if (crossObject == null)
                 return RayTraceResult.Fail;
@@ -134,15 +156,15 @@ namespace RayTracing2._0
             return new RayTraceResult(true, crossObject, crossPoint, resultColor);
         }
         
-        private (ISceneObject, Vector3) FindCrossWithScene(Vector3 fromPoint, Vector3 toPoint, double tMin, double tMax)
+        private (ISceneObject, Vector3) FindCrossWithScene(SearchParameters parameters)
         {
             ISceneObject sceneObject = null;
-            var ray = new Ray(fromPoint, toPoint);
+            var tMax = parameters.Max;
             foreach (var sphere in _spheres)
             {
-                foreach (var rayCoef in sphere.FindIntersectsRay(ray))
+                foreach (var rayCoef in sphere.FindIntersectsRay(parameters.Ray))
                 {
-                    if (IsValidLength(tMin, tMax, rayCoef))
+                    if (IsValidLength(parameters.Min, tMax, rayCoef))
                     {
                         tMax = rayCoef;
                         sceneObject = sphere;
@@ -153,12 +175,12 @@ namespace RayTracing2._0
             if (sceneObject == null)
                 return (null, null);
             
-            return (sceneObject, ray.GetPointFromCoefficient(tMax));
+            return (sceneObject, parameters.Ray.GetPointFromCoefficient(tMax));
         }
         
         private static bool IsValidLength(double tMin, double tMax, double t)
         {
-            return t >= tMin && t <= tMax && t < double.PositiveInfinity;
+            return t > tMin && t < tMax && t < double.PositiveInfinity;
         }
 
         private VecColor FindDiffusedLight(Vector3 normalVector3, Vector3 crossPoint, ISceneObject sceneObject, int remainingIterations)
@@ -166,15 +188,17 @@ namespace RayTracing2._0
             var sum = new VecColor(0, 0, 0);
             foreach (var light in _lights)
             {
-                var lightNormalVector = light.Location - crossPoint;
-                var normalLightUnitVector = lightNormalVector / lightNormalVector.Lenght;
+                var lightDirection = light.GetDirection(crossPoint);
+                var normalLightUnitVector = lightDirection / lightDirection.Lenght;
                 var cosBetween = Vector3.DotProduct(normalVector3, normalLightUnitVector);
-                if(cosBetween <= 0)
+                if(cosBetween <= 0/* || AnyObjectBetween(crossPoint, light.Location, sceneObject)*/)
                     continue;
-                var (crossObject, newCrossPoint) = FindCrossWithScene(crossPoint, light.Location, 0.01, lightNormalVector.Lenght);
-
+                var (crossObject, _) = FindCrossWithScene(light.GetSearchParametersForEclipsingObjects(crossPoint));
+                
                 if (crossObject != null)
                     continue;
+                
+                
                 // var rayTraceResult = TraceRay(crossPoint, light.Location, 0.01, lightNormalVector.Lenght,
                 //     1);
                 // if(rayTraceResult.Success)
@@ -195,18 +219,20 @@ namespace RayTracing2._0
             return GlobalLightningParameters.DiffusionIlluminationCoefficient * sum;
         }
 
+        //not work
         private bool AnyObjectBetween(Vector3 firstPoint, Vector3 secondPoint, ISceneObject sceneObject)
         {
             var cos = (float) Vector3.CosBetween(firstPoint, secondPoint);
+            var ray = new Ray(firstPoint, secondPoint);
             foreach (var sphere in _spheres)
             {
-                if(sphere != sceneObject)
+                foreach (var crossCoef in sphere.FindIntersectsRay(ray))
                 {
-                    
-                    // var minT = Math.Min(result.Item1, result.Item2);
-                    // var crossPoint  = firstPoint + secondPoint * minT;
+                    // var crossPoint  = firstPoint + secondPoint * crossCoef;
                     // if (PointBetween(crossPoint, firstPoint, secondPoint, cos))
                     //     return true;
+                    if (crossCoef >= 0 && crossCoef <= 1)
+                        return true;
                 }
             }
 
@@ -279,7 +305,7 @@ namespace RayTracing2._0
 
         private void trackBar2_Scroll_1(object sender, EventArgs e)
         {
-            GlobalLightningParameters.BackgroundIlluminationRatio = trackBar2.Value / 50d;
+            GlobalLightningParameters.BackgroundIlluminationRatio = trackBar2.Value;
         }
 
         private void trackBar3_Scroll(object sender, EventArgs e)
@@ -291,6 +317,21 @@ namespace RayTracing2._0
         private void trackBar4_Scroll(object sender, EventArgs e)
         {
             GlobalLightningParameters.ReflectedBeamRatio = trackBar4.Value / 50d;
+        }
+    }
+
+    public class SearchParameters
+    {
+        public Ray Ray { get; private set; }
+
+        public double Min{ get; private set; }
+        public double Max{ get; private set; }
+
+        public SearchParameters(Ray ray, double tMin, double tMax)
+        {
+            this.Ray = ray;
+            this.Min = tMin;
+            this.Max = tMax;
         }
     }
 }

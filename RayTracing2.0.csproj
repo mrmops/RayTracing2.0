@@ -55,7 +55,8 @@
         </Compile>
         <Compile Include="GlobalLightningParameters.cs" />
         <Compile Include="ISceneObject.cs" />
-        <Compile Include="Light.cs" />
+        <Compile Include="Lights\ILight.cs" />
+        <Compile Include="Lights\PointLight.cs" />
         <Compile Include="Ray.cs" />
         <Compile Include="RayTraceResult.cs" />
         <Compile Include="Sphere.cs" />

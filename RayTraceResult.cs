@@ -6,7 +6,7 @@ namespace RayTracing2._0
         public bool Success { get; private set; }
         public ISceneObject CrossObject{ get; private set; }
         public Vector3 CrossPoint{ get; private set; }
-        public VecColor VecColor => ReflectionLight.ToResultColor() ^ CrossObject.Color;
+        public VecColor VecColor => VecColor.Intersection(ReflectionLight.ToResultColor(), CrossObject.Color);
         public ReflectionLight ReflectionLight { get; private set; }
 
         public RayTraceResult(bool success, ISceneObject crossObject = null, Vector3 crossPoint = null, ReflectionLight reflectionLight = null)
