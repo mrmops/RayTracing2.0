@@ -46,7 +46,6 @@
         <Reference Include="System.Xml" />
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="Color.cs" />
         <Compile Include="Form1.cs">
             <SubType>Form</SubType>
         </Compile>
@@ -54,13 +53,20 @@
             <DependentUpon>Form1.cs</DependentUpon>
         </Compile>
         <Compile Include="GlobalLightningParameters.cs" />
-        <Compile Include="ISceneObject.cs" />
+        <Compile Include="Infostructure\Matrix.cs" />
+        <Compile Include="Infostructure\Ray.cs" />
+        <Compile Include="Infostructure\RayTraceResult.cs" />
+        <Compile Include="Infostructure\SearchParameters.cs" />
+        <Compile Include="Infostructure\VecColor.cs" />
+        <Compile Include="Infostructure\Vector3.cs" />
+        <Compile Include="Lights\DirectionLight.cs" />
         <Compile Include="Lights\ILight.cs" />
+        <Compile Include="Lights\Light.cs" />
         <Compile Include="Lights\PointLight.cs" />
-        <Compile Include="Ray.cs" />
-        <Compile Include="RayTraceResult.cs" />
-        <Compile Include="Sphere.cs" />
-        <Compile Include="Vector3.cs" />
+        <Compile Include="ReflectionLight.cs" />
+        <Compile Include="Scene.cs" />
+        <Compile Include="SceneObjects\ISceneObject.cs" />
+        <Compile Include="SceneObjects\Sphere.cs" />
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <EmbeddedResource Include="Form1.resx">

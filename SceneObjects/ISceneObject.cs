@@ -6,6 +6,10 @@ namespace RayTracing2._0
     {
         IEnumerable<double> FindIntersectsRay(Ray ray);
         Vector3 GetNormalUnitVector(Vector3 crossPoint);
-        VecColor Color { get; set; }
+        VecColor Color { get; }
+
+        double ReflectCoef { get; }
+        
+        double SpecularCoef { get; }
     }
 }

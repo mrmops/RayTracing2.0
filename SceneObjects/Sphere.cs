@@ -7,13 +7,19 @@ namespace RayTracing2._0
     {
         public Vector3 Center;
         public double Radius;
+        private readonly double _squareRadius;
         public VecColor Color { get; set; }
+        public double ReflectCoef { get; private set; }
+        public double SpecularCoef { get; private set; }
 
-        public Sphere(Vector3 center, double radius, VecColor color)
+        public Sphere(Vector3 center, double radius, VecColor color, double reflectCoef, double specularCoef)
         {
             Center = center;
             Radius = radius;
             Color = color;
+            _squareRadius = Radius * Radius;
+            ReflectCoef = reflectCoef;
+            SpecularCoef = specularCoef;
         }
 
         public Vector3 GetNormalUnitVector(Vector3 crossPoint)
@@ -26,9 +32,9 @@ namespace RayTracing2._0
         {
             var oc = ray.StartPoint - Center;
 
-            var k1 = Vector3.DotProduct(ray.TargetPoint, ray.TargetPoint);
-            var k2 = 2 * Vector3.DotProduct(oc, ray.TargetPoint);
-            var k3 = Vector3.DotProduct(oc, oc) - Radius * Radius;
+            var k1 = ray.DirectionDot;
+            var k2 = 2 * Vector3.DotProduct(oc, ray.Direction);
+            var k3 = Vector3.DotProduct(oc, oc) - _squareRadius;
 
             var discriminant = k2 * k2 - 4 * k1 * k3;
             if (discriminant < 0)

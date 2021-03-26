@@ -62,5 +62,16 @@ namespace RayTracing2._0
         {
             return DotProduct(point1, point2) / (point1.Lenght * point2.Lenght);
         }
+
+        public Matrix ToMatrix()
+        {
+            return new Matrix(new double[4, 1]
+            {
+                {X},
+                {Y},
+                {Z},
+                {1}
+            });
+        }
     }
 }

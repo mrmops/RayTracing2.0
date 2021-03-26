@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -37,15 +38,16 @@ namespace RayTracing2._0
             DoubleBuffered = true;
             pictureBox.KeyDown += NavigateCamera;
             
-            
-            // WindowState = FormWindowState.Maximized;
             _canvasSize = new Size(pictureBox.Width, pictureBox.Height);
              _viewMatrix =UpdateViewSize(_canvasSize.Width, _canvasSize.Height);
-            //_viewCanvas = new SizeF(2, 2);
-            pictureBox.SizeChanged += (sender, args) =>
+             pictureBox.SizeChanged += (sender, args) =>
             {
                 _canvasSize = new Size(pictureBox.Width, pictureBox.Height);
                 _viewMatrix = UpdateViewSize(_canvasSize.Width, _canvasSize.Height);
+                if (UpdateIsStoped && _canvasSize.Width != 0 && _canvasSize.Height != 0)
+                {
+                    UpdateIsStoped = false;
+                }
             };
             _timer.Tick += async (sender, args) =>
             {
@@ -61,6 +63,7 @@ namespace RayTracing2._0
             
             _timer.Start();
         }
+        
 
         private SizeF UpdateViewSize(int width, int height)
         {
@@ -76,58 +79,59 @@ namespace RayTracing2._0
                 var camera = new Vector3(_camera.X, _camera.Y, _camera.Z);
                 
                 var canvas = new Bitmap(localCanvasSize.Width, localCanvasSize.Height, PixelFormat.Format32bppArgb);
-                var canvasHeight = canvas.Height;
-                var canvasWidth = canvas.Width;
-                var any = new HashSet<int>();
-                
-                for(var x = -canvasWidth / 2; x <canvasWidth / 2; x++)
-                {
-                    var dx = x + canvasWidth / 2;
+                var canvasHeight = localCanvasSize.Height;
+                var canvasWidth = localCanvasSize.Width;
 
-
-                    for (int y = -canvasHeight / 2 + 1; y < canvasHeight / 2; y++)
-                    {
-                        var viewPortPosition = CanvasToViewport(x, y) + camera;
-                        var result = TraceRay(camera, viewPortPosition, 0.001, double.PositiveInfinity, 3);
-                        if(result.Success)
-                        {
-                            var dy = canvasHeight / 2 - y;
-                            var color = result.VecColor.ToColor();
-                            lock (canvas)
-                            {
-                                canvas.SetPixel(dx, dy, color);
-                            }
-                        }
-                    }
-                }
-
-                // Parallel.For(-canvasWidth / 2, canvasWidth / 2, x =>
+                // for(var x = -canvasWidth / 2; x <canvasWidth / 2; x++)
                 // {
                 //     var dx = x + canvasWidth / 2;
                 //
                 //
                 //     for (int y = -canvasHeight / 2 + 1; y < canvasHeight / 2; y++)
                 //     {
-                //         var viewPortPosition = CanvasToViewport(x, y) + camera;
+                //         var viewPortPosition = CanvasToDirectionViewport(x, y);
                 //         var result = TraceRay(camera, viewPortPosition, 0.001, double.PositiveInfinity, 3);
                 //         if(result.Success)
                 //         {
                 //             var dy = canvasHeight / 2 - y;
                 //             var color = result.VecColor.ToColor();
+                //
                 //             lock (canvas)
                 //             {
                 //                 canvas.SetPixel(dx, dy, color);
                 //             }
                 //         }
                 //     }
-                // });
+                // }
+
+                Parallel.For(-canvasWidth / 2, canvasWidth / 2, x =>
+                {
+                    var dx = x + canvasWidth / 2;
+                
+                
+                    for (int y = -canvasHeight / 2 + 1; y < canvasHeight / 2; y++)
+                    {
+                        var directionViewPortPosition = CanvasToDirectionViewport(x, y);
+                        var result = TraceRay(camera, directionViewPortPosition, 0.001, double.PositiveInfinity, 4);
+                        if(result.Success)
+                        {
+                            var dy = canvasHeight / 2 - y;
+                            var color = result.VecColor.ToColor();
+                            lock (canvas)
+                            {
+                               canvas.SetPixel(dx, dy, color);
+                            }
+                        }
+                    }
+                });
+
                 return canvas;
             });
             task.Start();
             return task;
         }
         
-        private Vector3 CanvasToViewport(int x, int y)
+        private Vector3 CanvasToDirectionViewport(int x, int y)
         {
             return new Vector3(
                 x * (double) _viewMatrix.Width / _canvasSize.Width,
@@ -149,10 +153,15 @@ namespace RayTracing2._0
                 return RayTraceResult.Fail;
 
             var normalUnitVector = crossObject.GetNormalUnitVector(crossPoint);
+            
+            var (diffusedLight, primaryIllumination) = FindDiffusedAndPrimaryLight(normalUnitVector, crossPoint, crossObject, iterationCount);
+            
+            var reflectLight = FindReflectLight(normalUnitVector, directionPoint * -1, crossPoint, tMin, tMax, iterationCount);
+            
             var resultColor = new ReflectionLight(
-                FindDiffusedLight(normalUnitVector, crossPoint, crossObject, iterationCount), 
-                FindReflectLight(normalUnitVector, crossPoint, tMin, tMax, iterationCount),
-                VecColor.Empty);
+                diffusedLight, 
+                reflectLight,
+                primaryIllumination);
             return new RayTraceResult(true, crossObject, crossPoint, resultColor);
         }
         
@@ -180,12 +189,13 @@ namespace RayTracing2._0
         
         private static bool IsValidLength(double tMin, double tMax, double t)
         {
-            return t > tMin && t < tMax && t < double.PositiveInfinity;
+            return t > tMin && t < tMax;
         }
 
-        private VecColor FindDiffusedLight(Vector3 normalVector3, Vector3 crossPoint, ISceneObject sceneObject, int remainingIterations)
+        private (VecColor, VecColor) FindDiffusedAndPrimaryLight(Vector3 normalVector3, Vector3 crossPoint, ISceneObject sceneObject, int remainingIterations)
         {
-            var sum = new VecColor(0, 0, 0);
+            var diffusedLight = VecColor.Empty;
+            var primaryIlluminationLight = VecColor.Empty;
             foreach (var light in _lights)
             {
                 var lightDirection = light.GetDirection(crossPoint);
@@ -212,51 +222,28 @@ namespace RayTracing2._0
                 // {
                 //     lightIntensity = light.Intensity * light.Color * cosBetween;
                 // }
-                var lightIntensity = light.Intensity * light.Color * cosBetween;
-                sum += lightIntensity;
+                var lightColor = light.Intensity * light.Color;
+                var lightIntensity = lightColor * cosBetween;
+                primaryIlluminationLight += lightColor * Math.Pow(cosBetween, sceneObject.SpecularCoef);
+                diffusedLight += lightIntensity;
             }
 
-            return GlobalLightningParameters.DiffusionIlluminationCoefficient * sum;
+            return (GlobalLightningParameters.DiffusionIlluminationCoefficient * diffusedLight, primaryIlluminationLight);
         }
 
-        //not work
-        private bool AnyObjectBetween(Vector3 firstPoint, Vector3 secondPoint, ISceneObject sceneObject)
+        private VecColor FindReflectLight(Vector3 normalUnitVector3, Vector3 negativeRayDirection, Vector3 crossPoint, double tMin, double tMax, int iterationCount) 
         {
-            var cos = (float) Vector3.CosBetween(firstPoint, secondPoint);
-            var ray = new Ray(firstPoint, secondPoint);
-            foreach (var sphere in _spheres)
-            {
-                foreach (var crossCoef in sphere.FindIntersectsRay(ray))
-                {
-                    // var crossPoint  = firstPoint + secondPoint * crossCoef;
-                    // if (PointBetween(crossPoint, firstPoint, secondPoint, cos))
-                    //     return true;
-                    if (crossCoef >= 0 && crossCoef <= 1)
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        private bool PointBetween(Vector3 crossPoint, Vector3 firstPoint, Vector3 secondPoint, float cos)
-        {
-            var cosBetween = (float) Vector3.CosBetween(crossPoint, firstPoint);
-            var between = (float) Vector3.CosBetween(crossPoint, secondPoint);
-            return cos <= cosBetween && cos <= between;
-        }
-
-        private VecColor FindReflectLight(Vector3 normalUnitVector3, Vector3 crossPoint, double tMin, double tMax, int iterationCount)
-        {
-            var normalizeCrossPoint = crossPoint / crossPoint.Lenght;
-            var newPoint = normalizeCrossPoint - 2.0 * normalUnitVector3 * Vector3.DotProduct(normalUnitVector3, normalizeCrossPoint);
-            var rayTraceResult = TraceRay(crossPoint, newPoint, tMin, tMax, iterationCount);
+            // var normalizeCrossPoint = negativeRayDirection / negativeRayDirection.Lenght;
+            // var newPoint = normalizeCrossPoint - 2.0 * normalUnitVector3 * Vector3.DotProduct(normalUnitVector3, normalizeCrossPoint);
+            // var directionPoint = newPoint - negativeRayDirection;
+            var reflectDirection = 2*normalUnitVector3*Vector3.DotProduct(normalUnitVector3, negativeRayDirection) - negativeRayDirection;
+            var rayTraceResult = TraceRay(crossPoint, reflectDirection, tMin, tMax, iterationCount);
             
             if (rayTraceResult.Success)
             {
                 return rayTraceResult.VecColor
-                       * GlobalLightningParameters.ReflectedBeamRatio 
-                       * Math.Pow(Math.E, -1 * (crossPoint - rayTraceResult.CrossPoint).Lenght);
+                    /** GlobalLightningParameters.ReflectedBeamRatio 
+                    * Math.Pow(Math.E, -1 * (crossPoint - rayTraceResult.CrossPoint).Lenght)*/;
             }
             
             return VecColor.Empty;
@@ -282,22 +269,34 @@ namespace RayTracing2._0
             {
                 case Keys.A:
                 {
-                    _camera = new Vector3(_camera.X - d, _camera.Y, _camera.Z);
+                    _camera = new Vector3(_camera.X  - d, _camera.Y, _camera.Z);
                     return;
                 }
                 case Keys.D:
                 {
-                    _camera = new Vector3(_camera.X + d, _camera.Y, _camera.Z);
+                    _camera = new Vector3(_camera.X  + d, _camera.Y, _camera.Z);
                     return;
                 }
                 case Keys.W:
                 {
-                    _camera = new Vector3(_camera.X, _camera.Y - d, _camera.Z);
+                    _camera = new Vector3(_camera.X, _camera.Y, _camera.Z  + d);
                     return;
                 }
                 case Keys.S:
                 {
-                    _camera = new Vector3(_camera.X , _camera.Y + d, _camera.Z);
+                    _camera = new Vector3(_camera.X, _camera.Y, _camera.Z  - d);
+                    return;
+                }
+                
+                case Keys.Space:
+                {
+                    _camera = new Vector3(_camera.X, _camera.Y + d, _camera.Z);
+                    return;
+                }
+                
+                case Keys.ShiftKey:
+                {
+                    _camera = new Vector3(_camera.X, _camera.Y - d, _camera.Z);
                     return;
                 }
             }
@@ -318,20 +317,35 @@ namespace RayTracing2._0
         {
             GlobalLightningParameters.ReflectedBeamRatio = trackBar4.Value / 50d;
         }
-    }
+        
+        #region Not work
 
-    public class SearchParameters
-    {
-        public Ray Ray { get; private set; }
-
-        public double Min{ get; private set; }
-        public double Max{ get; private set; }
-
-        public SearchParameters(Ray ray, double tMin, double tMax)
+        private bool AnyObjectBetween(Vector3 firstPoint, Vector3 secondPoint, ISceneObject sceneObject)
         {
-            this.Ray = ray;
-            this.Min = tMin;
-            this.Max = tMax;
+            var cos = (float) Vector3.CosBetween(firstPoint, secondPoint);
+            var ray = new Ray(firstPoint, secondPoint - firstPoint);
+            foreach (var sphere in _spheres)
+            {
+                foreach (var crossCoef in sphere.FindIntersectsRay(ray))
+                {
+                    // var crossPoint  = firstPoint + secondPoint * crossCoef;
+                    // if (PointBetween(crossPoint, firstPoint, secondPoint, cos))
+                    //     return true;
+                    if (crossCoef >= 0 && crossCoef <= 1)
+                        return true;
+                }
+            }
+
+            return false;
         }
+
+        private bool PointBetween(Vector3 crossPoint, Vector3 firstPoint, Vector3 secondPoint, float cos)
+        {
+            var cosBetween = (float) Vector3.CosBetween(crossPoint, firstPoint);
+            var between = (float) Vector3.CosBetween(crossPoint, secondPoint);
+            return cos <= cosBetween && cos <= between;
+        }
+
+        #endregion
     }
 }
