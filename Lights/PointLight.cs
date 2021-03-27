@@ -16,9 +16,9 @@ namespace RayTracing2._0
             return new SearchParameters(new Ray(crossPoint, Location - crossPoint), 0.001, 1);
         }
 
-        public override Vector3 GetDirection(Vector3 crossPoint)
+        public override Vector3 GetDirection(Vector3 point)
         {
-            return Location - crossPoint;
+            return Location - point;
         }
     }
 }

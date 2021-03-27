@@ -28,7 +28,7 @@ namespace RayTracing2._0
             return normalPoint / normalPoint.Lenght;
         }
 
-        public IEnumerable<double> FindIntersectsRay(Ray ray)
+        public IEnumerable<double> FindIntersectedRayCoefficients(Ray ray)
         {
             var oc = ray.StartPoint - Center;
 

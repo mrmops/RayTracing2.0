@@ -20,7 +20,7 @@ namespace RayTracing2._0
                 double.PositiveInfinity);
         }
 
-        public override Vector3 GetDirection(Vector3 crossPoint)
+        public override Vector3 GetDirection(Vector3 point)
         {
             return Direction;
         }

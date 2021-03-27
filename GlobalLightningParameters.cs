@@ -11,6 +11,6 @@ namespace RayTracing2._0
         public static double IlluminanceFactorCoefficient = 0.75;
         public static double FongCoefficient = 5;
 
-        public static double BackgroundLight => BackgroundIlluminationRatio * BackgroundIntensityRatio;
+        public static VecColor BackgroundLight => BackgroundIlluminationRatio * BackgroundIntensityRatio * VecColor.Full;
     }
 }

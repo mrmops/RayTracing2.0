@@ -14,6 +14,6 @@ namespace RayTracing2._0
         }
 
         public abstract SearchParameters GetSearchParametersForEclipsingObjects(Vector3 crossPoint);
-        public abstract Vector3 GetDirection(Vector3 crossPoint);
+        public abstract Vector3 GetDirection(Vector3 point);
     }
 }

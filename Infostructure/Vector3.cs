@@ -16,6 +16,17 @@ namespace RayTracing2._0
         }
 
         public double Lenght => Math.Sqrt(X * X + Y * Y + Z * Z);
+        
+        public Matrix ToMatrix()
+        {
+            return new Matrix(new double[4, 1]
+            {
+                {X},
+                {Y},
+                {Z},
+                {1}
+            });
+        }
 
         public override string ToString()
         {
@@ -61,17 +72,6 @@ namespace RayTracing2._0
         public static double CosBetween(Vector3 point1, Vector3 point2)
         {
             return DotProduct(point1, point2) / (point1.Lenght * point2.Lenght);
-        }
-
-        public Matrix ToMatrix()
-        {
-            return new Matrix(new double[4, 1]
-            {
-                {X},
-                {Y},
-                {Z},
-                {1}
-            });
         }
     }
 }

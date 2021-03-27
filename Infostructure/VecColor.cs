@@ -34,6 +34,7 @@ namespace RayTracing2._0
         }
 
         public static VecColor Empty => new VecColor(0, 0, 0);
+        public static VecColor Full => new VecColor(255, 255, 255);
 
         public Color ToColor()
         {
@@ -57,7 +58,7 @@ namespace RayTracing2._0
         
         public static VecColor operator *(VecColor c1, VecColor c2)
         {
-            return new VecColor(c1.R * c2.R, c1.G * c2.G, c1.B * c2.B);
+            return new VecColor(c1.G * c2.B - c1.B * c2.G, c1.B * c2.R - c1.R * c2.B, c1.R * c2.G - c1.G * c2.R);
         }
 
         public static VecColor operator *(VecColor c1, double coef)
@@ -68,6 +69,11 @@ namespace RayTracing2._0
         public static VecColor operator +(VecColor c1, double coef)
         {
             return new VecColor((int) (c1.R + coef), (int) (c1.G + coef), (int) (c1.B + coef));
+        }
+        
+        public static VecColor operator /(VecColor c1, double coef)
+        {
+            return new VecColor((int) (c1.R / coef), (int) (c1.G / coef), (int) (c1.B / coef));
         }
         
         public static VecColor operator *( double coef, VecColor c1)
