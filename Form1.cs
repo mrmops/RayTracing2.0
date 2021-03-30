@@ -22,19 +22,50 @@ namespace RayTracing2._0
             pictureBox.MouseClick += ChangeNavigate;
             
             
-            _timer.Tick += async (sender, args) =>
+            // _timer.Tick += async (sender, args) =>
+            // {
+            //     _timer.Enabled = false;
+            //     var newCanvasSize = new Size(pictureBox.Width, pictureBox.Height);
+            //     if (newCanvasSize.Width != 0 && newCanvasSize.Height != 0)
+            //     {
+            //         var image = await _scene.GetFrame(newCanvasSize);
+            //         pictureBox.Image = image;
+            //     }
+            //     _timer.Enabled = true;
+            // };
+            //
+            // _timer.Start();
+            UpdateFrame();
+        }
+
+        public void UpdateFrame()
+        {
+            var newCanvasSize = new Size(pictureBox.Width, pictureBox.Height);
+            var fragmentsCount = 10;
+            _scene.GetFrame(newCanvasSize, fragmentsCount).ContinueWith(task =>
             {
-                _timer.Enabled = false;
-                var newCanvasSize = new Size(pictureBox.Width, pictureBox.Height);
-                if (newCanvasSize.Width != 0 && newCanvasSize.Height != 0)
+                UpdateFrame();
+                var canvas = new Bitmap(newCanvasSize.Width, newCanvasSize.Height);
+                var fragments = task.Result;
+                var columnsPerFragment = canvas.Width / fragmentsCount + 1;
+                foreach (var imageFragment in fragments)
                 {
-                    var image = await _scene.GetFrame(newCanvasSize);
-                    pictureBox.Image = image;
+                    var colors = imageFragment.Colors;
+                    var fragmentShift = imageFragment.FragmentIndex * columnsPerFragment;
+                    for (var x = 0; x < colors.GetLength(0); x++)
+                    {
+                        var dx = x + fragmentShift;
+                        if(dx >= canvas.Width)
+                            break;
+                        for (var y = 0; y < colors.GetLength(1); y++)
+                        {
+                            
+                            canvas.SetPixel(dx, y, colors[x, y]);
+                        }
+                    }
                 }
-                _timer.Enabled = true;
-            };
-            
-            _timer.Start();
+                pictureBox.Image = canvas;
+            });
         }
 
         private void ChangeNavigate(object sender, MouseEventArgs e)

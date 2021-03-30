@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RayTracing2._0.Material;
 
 namespace RayTracing2._0
 {
@@ -7,11 +8,8 @@ namespace RayTracing2._0
         IEnumerable<double> FindIntersectedRayCoefficients(Ray ray);
         
         Vector3 GetNormalUnitVector(Vector3 crossPoint);
-        
-        VecColor Color { get; }
 
-        double ReflectCoef { get; }
-        
-        double SpecularCoef { get; }
+        IMaterial Material { get; }
+
     }
 }

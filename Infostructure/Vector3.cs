@@ -33,6 +33,12 @@ namespace RayTracing2._0
             return $"{X}, {Y}, {Z}";
         }
 
+        public SphereVector ToSphereVector()
+        {
+            var radius = Math.Sqrt(X * X + Y * Y + Z * Z);
+            return new SphereVector(radius, Math.Cos(Z / radius), Y / X);
+        }
+
         public static Vector3 operator -(Vector3 point1, Vector3 point2)
         {
             return new Vector3(point1.X - point2.X, point1.Y - point2.Y, point1.Z - point2.Z);

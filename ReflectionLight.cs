@@ -15,12 +15,12 @@ namespace RayTracing2._0
 
         public VecColor ToResultColor(ISceneObject sceneObject)
         {
-            var reflectCoef = sceneObject.ReflectCoef;
+            var reflectCoef = sceneObject.Material.ReflectCoef;
             if(reflectCoef < 0.99999)
             {
                 var normalColor = VecColor.Intersection(
                     (GlobalLightningParameters.BackgroundLight + DiffusedColor),
-                    sceneObject.Color);
+                    sceneObject.Material.Color);
                 return normalColor * (1 - reflectCoef) + ReflectColor * reflectCoef + PrimaryIllumination;
             }
 

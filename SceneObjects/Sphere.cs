@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using RayTracing2._0.Material;
 
 namespace RayTracing2._0
 {
@@ -8,18 +9,14 @@ namespace RayTracing2._0
         public Vector3 Center;
         public double Radius;
         private readonly double _squareRadius;
-        public VecColor Color { get; set; }
-        public double ReflectCoef { get; private set; }
-        public double SpecularCoef { get; private set; }
+        public IMaterial Material { get; }
 
-        public Sphere(Vector3 center, double radius, VecColor color, double reflectCoef, double specularCoef)
+        public Sphere(Vector3 center, double radius, IMaterial material)
         {
             Center = center;
             Radius = radius;
-            Color = color;
+            Material = material;
             _squareRadius = Radius * Radius;
-            ReflectCoef = reflectCoef;
-            SpecularCoef = specularCoef;
         }
 
         public Vector3 GetNormalUnitVector(Vector3 crossPoint)
