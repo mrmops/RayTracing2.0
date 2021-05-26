@@ -16,6 +16,11 @@ namespace RayTracing2._0
         }
 
         public double Lenght => Math.Sqrt(X * X + Y * Y + Z * Z);
+
+        public Vector3 Normalized()
+        {
+            return this / Lenght;
+        }
         
         public Matrix ToMatrix()
         {

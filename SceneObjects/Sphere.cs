@@ -10,6 +10,7 @@ namespace RayTracing2._0
         public double Radius;
         private readonly double _squareRadius;
         public IMaterial Material { get; }
+        public Vector3 Location => Center;
 
         public Sphere(Vector3 center, double radius, IMaterial material)
         {
@@ -25,7 +26,7 @@ namespace RayTracing2._0
             return normalPoint / normalPoint.Lenght;
         }
 
-        public IEnumerable<double> FindIntersectedRayCoefficients(Ray ray)
+        public IEnumerable<(double, Vector3)> FindIntersectedRayCoefficients(Ray ray)
         {
             var oc = ray.StartPoint - Center;
 
@@ -39,8 +40,10 @@ namespace RayTracing2._0
                 yield break;
             }
 
-            yield return (-k2 + Math.Sqrt(discriminant)) / (2 * k1);
-            yield return (-k2 - Math.Sqrt(discriminant)) / (2 * k1);
+            var findIntersectedRayCoefficients = (-k2 + Math.Sqrt(discriminant)) / (2 * k1);
+            yield return (findIntersectedRayCoefficients, GetNormalUnitVector(ray.GetPointFromCoefficient(findIntersectedRayCoefficients)));
+            var intersectedRayCoefficients = (-k2 - Math.Sqrt(discriminant)) / (2 * k1);
+            yield return (intersectedRayCoefficients, GetNormalUnitVector(ray.GetPointFromCoefficient(intersectedRayCoefficients)));
             
         }
     }

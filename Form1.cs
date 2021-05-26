@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using Timer = System.Windows.Forms.Timer;
@@ -20,8 +21,9 @@ namespace RayTracing2._0
             pictureBox.KeyDown += NavigateCamera;
             pictureBox.MouseMove += RotateCamera;
             pictureBox.MouseClick += ChangeNavigate;
-            
-            
+            Size = new Size(90, 90);
+
+
             // _timer.Tick += async (sender, args) =>
             // {
             //     _timer.Enabled = false;
@@ -41,30 +43,30 @@ namespace RayTracing2._0
         public void UpdateFrame()
         {
             var newCanvasSize = new Size(pictureBox.Width, pictureBox.Height);
-            var fragmentsCount = 10;
+            var fragmentsCount = 7;
             _scene.GetFrame(newCanvasSize, fragmentsCount).ContinueWith(task =>
             {
                 UpdateFrame();
-                var canvas = new Bitmap(newCanvasSize.Width, newCanvasSize.Height);
-                var fragments = task.Result;
-                var columnsPerFragment = canvas.Width / fragmentsCount + 1;
-                foreach (var imageFragment in fragments)
-                {
-                    var colors = imageFragment.Colors;
-                    var fragmentShift = imageFragment.FragmentIndex * columnsPerFragment;
-                    for (var x = 0; x < colors.GetLength(0); x++)
-                    {
-                        var dx = x + fragmentShift;
-                        if(dx >= canvas.Width)
-                            break;
-                        for (var y = 0; y < colors.GetLength(1); y++)
-                        {
-                            
-                            canvas.SetPixel(dx, y, colors[x, y]);
-                        }
-                    }
-                }
-                pictureBox.Image = canvas;
+                // var canvas = new Bitmap(newCanvasSize.Width, newCanvasSize.Height);
+                // var fragments = task.Result;
+                // var columnsPerFragment = canvas.Width / fragmentsCount + 1;
+                // foreach (var imageFragment in fragments)
+                // {
+                //     var colors = imageFragment.Colors;
+                //     var fragmentShift = imageFragment.FragmentIndex * columnsPerFragment;
+                //     for (var x = 0; x < colors.GetLength(0); x++)
+                //     {
+                //         var dx = x + fragmentShift;
+                //         if(dx >= canvas.Width)
+                //             break;
+                //         for (var y = 0; y < colors.GetLength(1); y++)
+                //         {
+                //             
+                //             canvas.SetPixel(dx, y, colors[x, y]);
+                //         }
+                //     }
+                // }
+                pictureBox.Image = task.Result;
             });
         }
 

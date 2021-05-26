@@ -1,3 +1,5 @@
+using System.Drawing;
+
 namespace RayTracing2._0
 {
     public class TraceRayResult
@@ -15,6 +17,6 @@ namespace RayTracing2._0
             ResultColor = resultColor;
         }
 
-        public static TraceRayResult Fail() => new TraceRayResult(false, null, null, null);
+        public static TraceRayResult Fail() => new TraceRayResult(false, null, null, VecColor.FromColor(Color.SkyBlue));
     }
 }

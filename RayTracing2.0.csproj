@@ -66,6 +66,7 @@
         <Compile Include="Lights\PointLight.cs" />
         <Compile Include="ReflectionLight.cs" />
         <Compile Include="Scene.cs" />
+        <Compile Include="SceneObjects\Cube.cs" />
         <Compile Include="SceneObjects\ISceneObject.cs" />
         <Compile Include="SceneObjects\Materials\CustomMaterial.cs" />
         <Compile Include="SceneObjects\Materials\Glass.cs" />
@@ -73,6 +74,7 @@
         <Compile Include="SceneObjects\Sphere.cs" />
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
+        <Compile Include="SceneObjects\Triangle.cs" />
         <Compile Include="TraceRayResult.cs" />
         <EmbeddedResource Include="Form1.resx">
           <DependentUpon>Form1.cs</DependentUpon>
