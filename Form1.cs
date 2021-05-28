@@ -43,7 +43,7 @@ namespace RayTracing2._0
         public void UpdateFrame()
         {
             var newCanvasSize = new Size(pictureBox.Width, pictureBox.Height);
-            var fragmentsCount = 7;
+            var fragmentsCount = 8;
             _scene.GetFrame(newCanvasSize, fragmentsCount).ContinueWith(task =>
             {
                 UpdateFrame();
@@ -66,7 +66,18 @@ namespace RayTracing2._0
                 //         }
                 //     }
                 // }
-                pictureBox.Image = task.Result;
+                var taskResult = task.Result;
+                var image = new Bitmap(newCanvasSize.Width, newCanvasSize.Height);
+                for (int x = 0; x < newCanvasSize.Width; x++)
+                {
+                    for (int y = 0; y < newCanvasSize.Height; y++)
+                    {
+                        image.SetPixel(x, y, taskResult[x,y]);
+                    }
+                }
+
+                
+                pictureBox.Image = new Bitmap(image);
             });
         }
 

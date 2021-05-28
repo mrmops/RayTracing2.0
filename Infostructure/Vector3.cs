@@ -4,9 +4,9 @@ namespace RayTracing2._0
 {
     public class Vector3
     {
-        public double X;
-        public double Y;
-        public double Z;
+        public double X { get; }
+        public double Y { get; }
+        public double Z { get; }
 
         public Vector3(double x, double y, double z)
         {
@@ -44,6 +44,16 @@ namespace RayTracing2._0
             return new SphereVector(radius, Math.Cos(Z / radius), Y / X);
         }
 
+        public override int GetHashCode()
+        {
+            int hash = 17;
+            // Suitable nullity checks etc, of course :)
+            hash = hash * 23 + X.GetHashCode();
+            hash = hash * 23 + Y.GetHashCode();
+            hash = hash * 23 + Z.GetHashCode();
+            return hash;
+        }
+
         public static Vector3 operator -(Vector3 point1, Vector3 point2)
         {
             return new Vector3(point1.X - point2.X, point1.Y - point2.Y, point1.Z - point2.Z);
@@ -52,6 +62,11 @@ namespace RayTracing2._0
         public static Vector3 operator +(Vector3 point1, Vector3 point2)
         {
             return new Vector3(point1.X + point2.X, point1.Y + point2.Y, point1.Z + point2.Z);
+        }
+        
+        public static Vector3 operator +(Vector3 point1, double a)
+        {
+            return new Vector3(point1.X + a, point1.Y + a, point1.Z + a);
         }
         
         public static Vector3 operator *(Vector3 point1, double n)

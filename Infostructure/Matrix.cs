@@ -128,9 +128,7 @@ namespace RayTracing2._0
         
         public static Vector3 operator *(Vector3 a, Matrix b)
         {
-            var result = MatrixMultiplication(a.ToMatrix()._matrix, b._matrix);
-
-            return new Vector3(result[0, 0], result[1, 0], result[2, 0]);
+            return b * a;
         }
         
         

@@ -2,6 +2,8 @@ namespace RayTracing2._0.SceneObjects
 {
     public class Triangle
     {
+        private Vector3 _e1;
+        private Vector3 _e2;
         public Vector3 A { get; private set; }
         public Vector3 B { get; private set; }
         public Vector3 C { get; private set; }
@@ -14,15 +16,15 @@ namespace RayTracing2._0.SceneObjects
             B = b;
             C = c;
             Normal = normal;
+            _e1 = B - A;
+            _e2 = C - A;
         }
 
         public bool FindIntersectedRayCoefficients(Ray ray, out double t)
         {
             t = 0;
-            var E1 = B - A;
-            var E2 = C - A;
-            var pVec = Vector3.CombineVector(ray.Direction, E2);
-            var det = Vector3.DotProduct(E1, pVec);
+            var pVec = Vector3.CombineVector(ray.Direction, _e2);
+            var det = Vector3.DotProduct(_e1, pVec);
             if (det < 1e-8 && det > -1e-8)
                 return false;
 
@@ -32,12 +34,12 @@ namespace RayTracing2._0.SceneObjects
             if (u < 0 || u > 1)
                 return false;
 
-            var qVec = Vector3.CombineVector(tVec, E1);
+            var qVec = Vector3.CombineVector(tVec, _e1);
             var v = Vector3.DotProduct(ray.Direction, qVec) * invDet;
             if (v < 0 || u + v > 1)
                 return false;
 
-            t =  Vector3.DotProduct(E2, qVec) * invDet;
+            t =  Vector3.DotProduct(_e2, qVec) * invDet;
             return true;
         }
     }

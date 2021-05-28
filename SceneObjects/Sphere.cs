@@ -23,7 +23,7 @@ namespace RayTracing2._0
         public Vector3 GetNormalUnitVector(Vector3 crossPoint)
         {
             var normalPoint = crossPoint - Center;
-            return normalPoint / normalPoint.Lenght;
+            return normalPoint.Normalized();
         }
 
         public IEnumerable<(double, Vector3)> FindIntersectedRayCoefficients(Ray ray)

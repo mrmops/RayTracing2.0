@@ -55,7 +55,6 @@
         <Compile Include="GlobalLightningParameters.cs" />
         <Compile Include="Infostructure\Matrix.cs" />
         <Compile Include="Infostructure\Ray.cs" />
-        <Compile Include="Infostructure\RayTraceResult.cs" />
         <Compile Include="Infostructure\SearchParameters.cs" />
         <Compile Include="Infostructure\SphereVector.cs" />
         <Compile Include="Infostructure\VecColor.cs" />
@@ -68,9 +67,11 @@
         <Compile Include="Scene.cs" />
         <Compile Include="SceneObjects\Cube.cs" />
         <Compile Include="SceneObjects\ISceneObject.cs" />
+        <Compile Include="SceneObjects\Lens.cs" />
         <Compile Include="SceneObjects\Materials\CustomMaterial.cs" />
         <Compile Include="SceneObjects\Materials\Glass.cs" />
         <Compile Include="SceneObjects\Materials\IMaterial.cs" />
+        <Compile Include="SceneObjects\Prism.cs" />
         <Compile Include="SceneObjects\Sphere.cs" />
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
