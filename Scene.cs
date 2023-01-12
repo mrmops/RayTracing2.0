@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
 using RayTracing2._0.Material;
 using RayTracing2._0.SceneObjects;
@@ -24,9 +25,9 @@ namespace RayTracing2._0
                     1)*/ new Glass(VecColor.FromColor(Color.Pink), 100, 0), new Vector3(0, 0, 7), 1),
 
             new Sphere(new Vector3(-2, 0, 4), 1,
-                new Glass(VecColor.FromColor(Color.Red), 100, 0.2)),
+                new Glass(VecColor.FromColor(Color.Red), 50, 0.02)),
 
-            new Cube(new Glass(VecColor.FromColor(Color.White/*Color.FromArgb(255, 110, 0 , 150)*/), 100, 0), 1),
+            new Cube(new Glass(VecColor.FromColor(Color.Yellow/*Color.FromArgb(255, 110, 0 , 150)*/), 100, 0.05), 1),
             
             new Prism(2,new Glass(VecColor.FromColor(Color.HotPink/*Color.FromArgb(255, 110, 0 , 150)*/), 100, 0)),
 
@@ -47,9 +48,9 @@ namespace RayTracing2._0
             new DirectionLight(new Vector3(0, 4, -7), VecColor.FromColor(Color.White), 0.4),
         };
 
-        public Task<Color[,]> GetFrame(Size frameSize, int fragmentsCount)
+        public Task<VecColor[,]> GetFrame(Size frameSize, int fragmentsCount)
         {
-            var task = new Task<Color[,]>(() =>
+            var task = new Task<VecColor[,]>(() =>
             {
                 var stopWatch = new Stopwatch();
                 stopWatch.Start();
@@ -58,7 +59,7 @@ namespace RayTracing2._0
                 //var canvas = new Bitmap(frameSize.Width, frameSize.Height, PixelFormat.Format32bppArgb);
                 var canvasHeight = frameSize.Height;
                 var canvasWidth = frameSize.Width;
-                Color[,] canvasColors = new Color[canvasWidth, canvasHeight];
+                VecColor[,] canvasColors = new VecColor[canvasWidth, canvasHeight];
 
                 var stepToPixel = 1 / (double) canvasHeight;
                 //var fragments = new ConcurrentBag<ImageFragment>();
@@ -85,63 +86,74 @@ namespace RayTracing2._0
 
                 var columnsPerFragment = canvasWidth / fragmentsCount + 1;
 
-                Parallel.For(0, fragmentsCount, fragmentIndex =>
+                ConcurrentQueue<int> fragments = new ConcurrentQueue<int>(Enumerable.Range(0, fragmentsCount));
+
+                Parallel.For(0, Math.Min(fragmentsCount, 256), _ =>
                 {
-                    //var colors = new Color[columnsPerFragment, canvasHeight];
-                    var fragmentShift = fragmentIndex * columnsPerFragment;
-                    for (var localX = 0; localX < columnsPerFragment; localX++)
-                    {
-                        var dx = localX + fragmentShift;
-                        if (dx >= canvasWidth)
-                            return;
-                        var x = dx - canvasWidth / 2;
-                        var halfCanvasHeight = canvasHeight / 2;
-                        for (var y = -halfCanvasHeight + 1; y < halfCanvasHeight; y++)
+                    while (true) {
+                        var success = fragments.TryDequeue(out int fragmentIndex);
+
+                        if (!success)
                         {
-                            var directionViewPortPosition =
-                                RotationMatrix * CanvasToDirectionViewport(x, y, stepToPixel);
-                            var result = TraceRay(camera, directionViewPortPosition, 5);
-                            var dy = halfCanvasHeight - y;
-                            var color = result.ResultColor?.ToColor() ?? Color.SkyBlue;
-                            //colors[localX, dy] = color;
-                            canvasColors[dx, dy] = color;
-
-                            /*lock(fragments)
-                                canvas.SetPixel(dx, dy, color);
-                            var a = 10;*/
-
-                            /*if(result.Success)
-                            {
-                                
-                                
-                                //dict.Add(new Point(dx,dy), color);
-                                // lock (canvas)
-                                // {
-                                //     canvas.SetPixel(dx, dy, color);
-                                // }
-                            }*/
+                            return;
                         }
+
+                        //var colors = new Color[columnsPerFragment, canvasHeight];
+                        var fragmentShift = fragmentIndex * columnsPerFragment;
+                        for (var localX = 0; localX < columnsPerFragment; localX++)
+                        {
+                            var dx = localX + fragmentShift;
+                            if (dx >= canvasWidth)
+                                return;
+                            var x = dx - canvasWidth / 2;
+                            var halfCanvasHeight = canvasHeight / 2;
+                            for (var y = -halfCanvasHeight + 1; y < halfCanvasHeight; y++)
+                            {
+                                var directionViewPortPosition =
+                                    RotationMatrix * CanvasToDirectionViewport(x, y, stepToPixel);
+                                var result = TraceRay(camera, directionViewPortPosition, 5);
+                                var dy = halfCanvasHeight - y;
+                                var color = result.ResultColor ?? VecColor.Empty;
+                                //colors[localX, dy] = color;
+                                canvasColors[dx, dy] = color;
+
+                                /*lock(fragments)
+                                    canvas.SetPixel(dx, dy, color);
+                                var a = 10;*/
+
+                                /*if(result.Success)
+                                {
+
+
+                                    //dict.Add(new Point(dx,dy), color);
+                                    // lock (canvas)
+                                    // {
+                                    //     canvas.SetPixel(dx, dy, color);
+                                    // }
+                                }*/
+                            }
+                        }
+
+                        //fragments.Add(new ImageFragment(fragmentIndex, colors));
+
+                        //  foreach (var colorLocation in dict)
+                        //  {
+                        //      var point = colorLocation.Key;
+                        //      canvas.SetPixel(point.X, point.Y, colorLocation.Value);
+                        // }
+
+                        // lock(fragments)
+                        //     for (var x = 0; x < colors.GetLength(0); x++)
+                        //     {
+                        //         var dx = x + fragmentShift;
+                        //         if(dx >= canvas.Width)
+                        //             break;
+                        //         for (var y = 0; y < colors.GetLength(1); y++)
+                        //         {
+                        //             canvas.SetPixel(dx, y, colors[x, y]);
+                        //         }
+                        //     }
                     }
-
-                    //fragments.Add(new ImageFragment(fragmentIndex, colors));
-
-                    //  foreach (var colorLocation in dict)
-                    //  {
-                    //      var point = colorLocation.Key;
-                    //      canvas.SetPixel(point.X, point.Y, colorLocation.Value);
-                    // }
-
-                    // lock(fragments)
-                    //     for (var x = 0; x < colors.GetLength(0); x++)
-                    //     {
-                    //         var dx = x + fragmentShift;
-                    //         if(dx >= canvas.Width)
-                    //             break;
-                    //         for (var y = 0; y < colors.GetLength(1); y++)
-                    //         {
-                    //             canvas.SetPixel(dx, y, colors[x, y]);
-                    //         }
-                    //     }
                 });
 
                 // for (int x = 0; x < canvasWidth; x++)

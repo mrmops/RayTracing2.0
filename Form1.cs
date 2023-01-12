@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Timer = System.Windows.Forms.Timer;
 
@@ -8,7 +9,7 @@ namespace RayTracing2._0
 {
     public partial class Form1 : Form
     {
-        private readonly Timer _timer = new Timer() {Interval = 1};
+        private readonly Timer _timer = new Timer() { Interval = 1 };
         private readonly Scene _scene = new Scene();
         protected override bool DoubleBuffered { get; set; } = true;
         private int _angleY;
@@ -21,8 +22,8 @@ namespace RayTracing2._0
             pictureBox.KeyDown += NavigateCamera;
             pictureBox.MouseMove += RotateCamera;
             pictureBox.MouseClick += ChangeNavigate;
-            Size = new Size(90, 90);
-
+            Size = new Size(200, 200);
+            pictureBox.Resize += onImageResize;
 
             // _timer.Tick += async (sender, args) =>
             // {
@@ -37,13 +38,20 @@ namespace RayTracing2._0
             // };
             //
             // _timer.Start();
-            UpdateFrame();
+            new Thread(UpdateFrame).Start();
+        }
+
+        public void onImageResize(object sender, EventArgs e)
+        {
         }
 
         public void UpdateFrame()
         {
             var newCanvasSize = new Size(pictureBox.Width, pictureBox.Height);
-            var fragmentsCount = 8;
+            var fragmentsCount = 500;
+
+
+
             _scene.GetFrame(newCanvasSize, fragmentsCount).ContinueWith(task =>
             {
                 UpdateFrame();
@@ -66,19 +74,29 @@ namespace RayTracing2._0
                 //         }
                 //     }
                 // }
-                var taskResult = task.Result;
-                var image = new Bitmap(newCanvasSize.Width, newCanvasSize.Height);
-                for (int x = 0; x < newCanvasSize.Width; x++)
-                {
-                    for (int y = 0; y < newCanvasSize.Height; y++)
-                    {
-                        image.SetPixel(x, y, taskResult[x,y]);
-                    }
-                }
+                var image = task.Result;
 
-                
-                pictureBox.Image = new Bitmap(image);
+                new Thread(() =>
+                {
+                    var bitmap = new Bitmap(newCanvasSize.Width, newCanvasSize.Height);
+                    for (int x = 0; x < newCanvasSize.Width; x++)
+                    {
+                        for (int y = 0; y < newCanvasSize.Height; y++)
+                        {
+                            bitmap.SetPixel(x, y, image[x, y]?.ToColor() ?? Color.SkyBlue);
+                        }
+                    }
+                    pictureBox.Invoke(new MyDelegate(UpdateImage), bitmap);
+                }).Start();
+
             });
+        }
+
+        public delegate void MyDelegate(Bitmap bitmap);
+
+        private void UpdateImage(Bitmap bitmap)
+        {
+            pictureBox.Image = bitmap;
         }
 
         private void ChangeNavigate(object sender, MouseEventArgs e)
@@ -86,7 +104,7 @@ namespace RayTracing2._0
             _navigate = !_navigate;
             if (_navigate)
             {
-                Point leftTop = pictureBox.PointToScreen(new Point(pictureBox.Width / 2,pictureBox.Height / 2));
+                Point leftTop = pictureBox.PointToScreen(new Point(pictureBox.Width / 2, pictureBox.Height / 2));
                 Cursor.Position = leftTop;
                 Cursor.Hide();
             }
@@ -98,7 +116,7 @@ namespace RayTracing2._0
 
         private void RotateCamera(object sender, MouseEventArgs e)
         {
-            if(!_navigate)
+            if (!_navigate)
                 return;
             var d = Math.PI / 180;
 
@@ -107,20 +125,18 @@ namespace RayTracing2._0
 
             _angleY += e.X - pictureBoxWidthCenter;
             _angleX += e.Y - pictureBoxHeightCenter;
-            
+
             var rotationMatrix = Matrix.CreateRotationMatrixY(_angleY * d)
                                  * Matrix.CreateRotationMatrixX(_angleX * d);
             _scene.RotationMatrix = rotationMatrix;
-            
-            
-            
-            
-            Point leftTop = pictureBox.PointToScreen(new Point(pictureBoxWidthCenter,pictureBoxHeightCenter));
+
+
+            Point leftTop = pictureBox.PointToScreen(new Point(pictureBoxWidthCenter, pictureBoxHeightCenter));
             Cursor.Position = leftTop;
         }
 
         #region OldCode
-        
+
         // private SizeF UpdateViewSize(int width, int height)
         // {
         //     return height > width
@@ -308,7 +324,7 @@ namespace RayTracing2._0
         //     
         //     return VecColor.Empty;
         // }
-        
+
         #endregion
 
         private void pictureBox_Click(object sender, EventArgs e)
@@ -318,45 +334,45 @@ namespace RayTracing2._0
 
         private void NavigateCamera(object sender, KeyEventArgs e)
         {
-            if(!_navigate)
+            if (!_navigate)
                 return;
-            
+
             var d = 0.2;
             var camera = _scene.CameraPosition;
             switch (e.KeyCode)
             {
                 case Keys.A:
-                {
-                    _scene.CameraPosition = _scene.RotationMatrix * new Vector3(-d, 0, 0) +  camera;
-                    return;
-                }
+                    {
+                        _scene.CameraPosition = _scene.RotationMatrix * new Vector3(-d, 0, 0) + camera;
+                        return;
+                    }
                 case Keys.D:
-                {
-                    _scene.CameraPosition = _scene.RotationMatrix * new Vector3(d, 0, 0) + camera;
-                    return;
-                }
+                    {
+                        _scene.CameraPosition = _scene.RotationMatrix * new Vector3(d, 0, 0) + camera;
+                        return;
+                    }
                 case Keys.W:
-                {
-                    _scene.CameraPosition = _scene.RotationMatrix * new Vector3(0, 0, d) + camera;
-                    return;
-                }
+                    {
+                        _scene.CameraPosition = _scene.RotationMatrix * new Vector3(0, 0, d) + camera;
+                        return;
+                    }
                 case Keys.S:
-                {
-                    _scene.CameraPosition = _scene.RotationMatrix * new Vector3(0, 0, -d) + camera;
-                    return;
-                }
-                
+                    {
+                        _scene.CameraPosition = _scene.RotationMatrix * new Vector3(0, 0, -d) + camera;
+                        return;
+                    }
+
                 case Keys.Space:
-                {
-                    _scene.CameraPosition = _scene.RotationMatrix * new Vector3(0, d, 0) + camera;
-                    return;
-                }
-                
+                    {
+                        _scene.CameraPosition = _scene.RotationMatrix * new Vector3(0, d, 0) + camera;
+                        return;
+                    }
+
                 case Keys.ShiftKey:
-                {
-                    _scene.CameraPosition = _scene.RotationMatrix * new Vector3(0, -d, 0) + camera;
-                    return;
-                }
+                    {
+                        _scene.CameraPosition = _scene.RotationMatrix * new Vector3(0, -d, 0) + camera;
+                        return;
+                    }
             }
         }
 

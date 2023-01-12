@@ -34,6 +34,7 @@ namespace RayTracing2._0
         }
 
         public static VecColor Empty => new VecColor(0, 0, 0);
+
         public static VecColor Full => new VecColor(255, 255, 255);
 
         public Color ToColor()
