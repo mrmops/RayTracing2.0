@@ -7,6 +7,7 @@ namespace RayTracing2._0.SceneObjects
 {
     public class Cube: ISceneObject
     {
+        private Random random = new Random();
         private List<Triangle> _triangles;
         private Sphere container = new Sphere(new Vector3(0, 0, 0), Math.Sqrt(3), null);
 
@@ -59,31 +60,29 @@ namespace RayTracing2._0.SceneObjects
 
         public IEnumerable<(double, Vector3)> FindIntersectedRayCoefficients(Ray ray)
         {
-            if(!container.FindIntersectedRayCoefficients(ray).Any())
+            if (!container.FindIntersectedRayCoefficients(ray).Any())
+            {
                 yield break;
+            }
+
+
             foreach (var triangle in _triangles)
             {
                 if (triangle.FindIntersectedRayCoefficients(ray, out var t))
                 {
-                    yield return (t, triangle.Normal);
+                    yield return (t, NewRandomNormal(triangle.Normal));
                 }
             }
         }
 
         private Vector3 NewRandomNormal(Vector3 normal)
         {
-            var random = new Random();
             var x = random.NextDouble() - 0.5;
             var y = random.NextDouble() - 0.5;
             var z = random.NextDouble() - 0.5;
 
             /*var angle = (angle1 * 1 - 0.5) * Math.PI;*/
             return (normal + new Vector3(x, y, z)).Normalized() /** Matrix.CreateRotationMatrixY(angle)*/;
-        }
-
-        public Vector3 GetNormalUnitVector(Vector3 crossPoint)
-        {
-            return new Vector3(0, 1, 0);
         }
 
         public IMaterial Material { get; }
