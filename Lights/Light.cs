@@ -1,8 +1,8 @@
-using System.Collections.Generic;
+using System.Numerics;
 
 namespace RayTracing2._0
 {
-    public abstract class Light: ILight
+    public abstract class Light : ILight
     {
         public VecColor Color { get; protected set; }
         public double Intensity;

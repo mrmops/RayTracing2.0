@@ -1,10 +1,12 @@
+using System.Numerics;
+
 namespace RayTracing2._0
 {
-    public class PointLight: Light
+    public class PointLight : Light
     {
         public Vector3 Location;
 
-        public PointLight(Vector3 location, VecColor color, double intensity)  : base(color, intensity)
+        public PointLight(Vector3 location, VecColor color, double intensity) : base(color, intensity)
         {
             Location = location;
             Color = color;
@@ -13,7 +15,7 @@ namespace RayTracing2._0
 
         public override SearchParameters GetSearchParametersForEclipsingObjects(Vector3 crossPoint)
         {
-            return new SearchParameters(new Ray(crossPoint, Location - crossPoint), 0.001, 1);
+            return new SearchParameters(new Ray(crossPoint, Location - crossPoint), 0.001f, 1);
         }
 
         public override Vector3 GetDirection(Vector3 point)

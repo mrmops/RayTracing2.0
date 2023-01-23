@@ -1,6 +1,6 @@
 namespace RayTracing2._0.Material
 {
-    public class CustomMaterial:IMaterial
+    public class CustomMaterial : IMaterial
     {
         public VecColor Color { get; }
         public double ReflectCoef { get; }

@@ -1,7 +1,7 @@
+using RayTracing2._0.Material;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using RayTracing2._0.Material;
 
 namespace RayTracing2._0.SceneObjects
 {
@@ -24,7 +24,7 @@ namespace RayTracing2._0.SceneObjects
                     vertexes.Add(new Vector3(x, 0, y));
                 }
             }
-            
+
             vertexes.Add(new Vector3(0, lenght, 0));
 
             var vector3 = new Vector3(2, -1, 1);
@@ -33,7 +33,7 @@ namespace RayTracing2._0.SceneObjects
             CreateTriangle(vertexes);
             _sphere = new Sphere(vector3, lenght, null);
         }
-        
+
         private void CreateTriangle(List<Vector3> vertexes)
         {
             const int index1 = 0;
@@ -59,7 +59,7 @@ namespace RayTracing2._0.SceneObjects
 
         public IEnumerable<(double, Vector3)> FindIntersectedRayCoefficients(Ray ray)
         {
-            if(!_sphere.FindIntersectedRayCoefficients(ray).Any())
+            if (!_sphere.FindIntersectedRayCoefficients(ray).Any())
                 yield break;
             foreach (var triangle in _triangles)
             {

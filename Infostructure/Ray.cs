@@ -1,24 +1,26 @@
+using System.Numerics;
+
 namespace RayTracing2._0
 {
     public class Ray
     {
         public Vector3 StartPoint { get; }
         public Vector3 Direction { get; }
-        
-        
-        public double DirectionDot { get; private set; }
+
+
+        public float DirectionDot { get; private set; }
 
         public Ray(Vector3 startPoint, Vector3 direction)
         {
             StartPoint = startPoint;
             Direction = direction;
-            DirectionDot = Vector3.DotProduct(Direction, Direction);
+            DirectionDot = Vector3.Dot(Direction, Direction);
         }
 
 
-        public Vector3 GetPointFromCoefficient(double coefficient)
+        public Vector3 GetPointFromCoefficient(float coefficient)
         {
-            return StartPoint + (coefficient * (Direction));
+            return StartPoint + Vector3.Multiply(coefficient, (Direction));
         }
 
         public override int GetHashCode()

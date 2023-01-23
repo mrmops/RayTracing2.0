@@ -1,5 +1,3 @@
-using System.Drawing;
-
 namespace RayTracing2._0
 {
     public static class GlobalLightningParameters

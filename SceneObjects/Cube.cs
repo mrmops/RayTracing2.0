@@ -1,11 +1,11 @@
+using RayTracing2._0.Material;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using RayTracing2._0.Material;
 
 namespace RayTracing2._0.SceneObjects
 {
-    public class Cube: ISceneObject
+    public class Cube : ISceneObject
     {
         private Random random = new Random();
         private List<Triangle> _triangles;
@@ -40,7 +40,7 @@ namespace RayTracing2._0.SceneObjects
             const int index6 = 5;
             const int index7 = 6;
             const int index8 = 7;
-            
+
             _triangles = new List<Triangle>()
             {
                 new Triangle(vertexes[index1], vertexes[index2], vertexes[index3], new Vector3(-1, 0, 0)),
