@@ -46,7 +46,6 @@
 			<DependentUpon>Form1.cs</DependentUpon>
 		</Compile>
 		<Compile Include="GlobalLightningParameters.cs" />
-		<Compile Include="Infostructure\Matrix.cs" />
 		<Compile Include="Infostructure\Ray.cs" />
 		<Compile Include="Infostructure\SearchParameters.cs" />
 		<Compile Include="Infostructure\SphereVector.cs" />
