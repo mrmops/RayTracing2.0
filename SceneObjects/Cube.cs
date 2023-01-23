@@ -70,7 +70,7 @@ namespace RayTracing2._0.SceneObjects
             {
                 if (triangle.FindIntersectedRayCoefficients(ray, out var t))
                 {
-                    yield return (t, NewRandomNormal(triangle.Normal));
+                    yield return (t, triangle.Normal);
                 }
             }
         }
