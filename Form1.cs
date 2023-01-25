@@ -48,7 +48,7 @@ namespace RayTracing2._0
         public void UpdateFrame()
         {
             var newCanvasSize = new Size(pictureBox.Width, pictureBox.Height);
-            var fragmentsCount = 500;
+            var fragmentsCount = newCanvasSize.Width;
 
 
 

@@ -27,7 +27,7 @@ namespace RayTracing2._0
             new Sphere(new Vector3(-2, 0, 4), 1,
                 new Glass(VecColor.FromColor(Color.Red), 50, 0.02)),
 
-            new Cube(new Glass(VecColor.FromColor(Color.Yellow/*Color.FromArgb(255, 110, 0 , 150)*/), 100, 0.05), 1),
+            new Cube(new Glass(VecColor.FromColor(Color.Transparent/*Color.FromArgb(255, 110, 0 , 150)*/), 100, 0), 1),
             
             new Prism(2,new Glass(VecColor.FromColor(Color.HotPink/*Color.FromArgb(255, 110, 0 , 150)*/), 100, 0)),
 
@@ -88,7 +88,7 @@ namespace RayTracing2._0
 
                 ConcurrentQueue<int> fragments = new ConcurrentQueue<int>(Enumerable.Range(0, fragmentsCount));
 
-                Parallel.For(0, Math.Min(fragmentsCount, 256), _ =>
+                Parallel.For(0, Math.Min(fragmentsCount, 16), _ =>
                 {
                     while (true) {
                         var success = fragments.TryDequeue(out int fragmentIndex);
