@@ -1,14 +1,15 @@
 using System;
+using System.Numerics;
 
 namespace RayTracing2._0
 {
     public class SphereVector
     {
-        public double Radius;
-        public double Teta;
-        public double Fi;
+        public float Radius;
+        public float Teta;
+        public float Fi;
 
-        public SphereVector(double radius, double teta, double fi)
+        public SphereVector(float radius, float teta, float fi)
         {
             Radius = radius;
             Teta = teta;
@@ -17,8 +18,11 @@ namespace RayTracing2._0
 
         public Vector3 ToCartesian()
         {
-            return new Vector3(Radius * Math.Sin(Teta) * Math.Cos(Fi), Radius * Math.Sin(Teta) * Math.Sin(Fi),
-                Radius * Math.Cos(Teta));
+            return new Vector3(
+                (float)(Radius * Math.Sin(Teta) * Math.Cos(Fi)),
+                (float)(Radius * Math.Sin(Teta) * Math.Sin(Fi)),
+                (float)(Radius * Math.Cos(Teta))
+            );
         }
     }
 }

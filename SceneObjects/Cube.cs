@@ -2,6 +2,7 @@ using RayTracing2._0.Material;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace RayTracing2._0.SceneObjects
 {
@@ -9,7 +10,7 @@ namespace RayTracing2._0.SceneObjects
     {
         private Random random = new Random();
         private List<Triangle> _triangles;
-        private Sphere container = new Sphere(new Vector3(0, 0, 0), Math.Sqrt(3), null);
+        private Sphere container = new Sphere(new Vector3(0, 0, 0), Math.Sqrt(3), new EmptyMaterial());
 
         public Cube(IMaterial material, int height)
         {
@@ -58,7 +59,7 @@ namespace RayTracing2._0.SceneObjects
             };
         }
 
-        public IEnumerable<(double, Vector3)> FindIntersectedRayCoefficients(Ray ray)
+        public IEnumerable<(float, Vector3)> FindIntersectedRayCoefficients(Ray ray)
         {
             if (!container.FindIntersectedRayCoefficients(ray).Any())
             {
@@ -75,15 +76,14 @@ namespace RayTracing2._0.SceneObjects
             }
         }
 
-        private Vector3 NewRandomNormal(Vector3 normal)
+        /*private Vector3 NewRandomNormal(Vector3 normal)
         {
             var x = random.NextDouble() - 0.5;
             var y = random.NextDouble() - 0.5;
             var z = random.NextDouble() - 0.5;
 
-            /*var angle = (angle1 * 1 - 0.5) * Math.PI;*/
-            return (normal + new Vector3(x, y, z)).Normalized() /** Matrix.CreateRotationMatrixY(angle)*/;
-        }
+            return (normal + new Vector3(x, y, z)).Normalized();
+        }*/
 
         public IMaterial Material { get; }
         public Vector3 Location { get; } = new Vector3(0, 0, 0);

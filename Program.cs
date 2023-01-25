@@ -11,7 +11,7 @@ namespace RayTracing2._0
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static async Task Main()
+        static void Main()
         {
 
             // var scene = new Scene();
@@ -39,6 +39,7 @@ namespace RayTracing2._0
             // canvas.Save("8k.png", ImageFormat.Png);
             AllocConsole();
             Application.EnableVisualStyles();
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new Form1());
 

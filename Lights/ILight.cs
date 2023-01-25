@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace RayTracing2._0
 {
     public interface ILight

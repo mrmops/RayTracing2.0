@@ -47,23 +47,24 @@ namespace RayTracing2._0 {
             new DirectionLight(new Vector3(0, 4, -7), VecColor.FromColor(Color.White), 0.4),
         };
 
-        public Task<VecColor[,]> GetFrame(Size frameSize, int fragmentsCount) {
-            var task = new Task<VecColor[,]>(() => {
+        public Task<List<KeyValuePair<Point, VecColor>>> GetFrame(Size frameSize, int fragmentsCount) {
+            var task = new Task<List<KeyValuePair<Point, VecColor>>>(() => {
                 var stopWatch = new Stopwatch();
                 stopWatch.Start();
                 var camera = new Vector3(CameraPosition.X, CameraPosition.Y, CameraPosition.Z);
 
                 var canvasHeight = frameSize.Height;
                 var canvasWidth = frameSize.Width;
-                VecColor[,] canvasColors = new VecColor[canvasWidth, canvasHeight];
+                /*VecColor[,] canvasColors = new VecColor[canvasWidth, canvasHeight];*/
+                var resultColors = new ConcurrentBag<KeyValuePair<Point, VecColor>>();
 
-                var stepToPixel = 1 / (float)canvasHeight;
+                var stepToPixel = (1f / canvasHeight);
 
                 var columnsPerFragment = canvasWidth / fragmentsCount + 1;
 
                 ConcurrentQueue<int> fragments = new ConcurrentQueue<int>(Enumerable.Range(0, fragmentsCount));
 
-                Parallel.For(0, Math.Min(fragmentsCount, 256), _ => {
+                Parallel.For(0, Math.Min(fragmentsCount, 16), _ => {
                     while(true) {
                         var success = fragments.TryDequeue(out int fragmentIndex);
 
@@ -80,11 +81,19 @@ namespace RayTracing2._0 {
                             var halfCanvasHeight = canvasHeight / 2;
                             for(var y = -halfCanvasHeight + 1; y < halfCanvasHeight; y++) {
                                 var directionViewPortPosition =
-                                    Vector3.Transform(CanvasToDirectionViewport(x, y, stepToPixel), RotationMatrix);
+                                    Vector3.Transform(CanvasToDirectionViewport(x, y, stepToPixel), 
+                                    RotationMatrix
+                                    );
                                 var result = TraceRay(camera, directionViewPortPosition, 5);
                                 var dy = halfCanvasHeight - y;
-                                var color = result?.ResultColor ?? VecColor.Empty;
-                                canvasColors[dx, dy] = color;
+                                /*canvasColors[dx, dy] = color;*/
+                                if(result.isSuccess) {
+                                    resultColors.Add(
+                                        new KeyValuePair<Point, VecColor>(
+                                            new Point(dx, dy), 
+                                            result.ResultColor)
+                                        );
+                                }
                             }
                         }
 
@@ -93,7 +102,7 @@ namespace RayTracing2._0 {
 
                 stopWatch.Stop();
                 Console.WriteLine(stopWatch.ElapsedMilliseconds);
-                return canvasColors;
+                return resultColors.ToList();
             });
             task.Start();
             return task;
@@ -108,7 +117,7 @@ namespace RayTracing2._0 {
             );
         }
 
-        private TraceRayResult? TraceRay(
+        private TraceRayResult TraceRay(
             Vector3 rayStart,
             Vector3 directionVector,
             int iterationsLeft,
@@ -117,7 +126,7 @@ namespace RayTracing2._0 {
             ) {
 
             if(iterationsLeft == 0) {
-                return null;
+                return TraceRayResult.Fail();
             }
 
             iterationsLeft--;
@@ -128,14 +137,13 @@ namespace RayTracing2._0 {
             var intersectionResult = TryGetTheClosestIntersectionWithTheScene(searchParameters);
 
             if(intersectionResult == null) {
-                return null;
+                return TraceRayResult.Fail();
             }
-            var intersectionResult2 = (Intersectionresult)intersectionResult;
-            var resultColor = CalculateResultColor(directionVector, iterationsLeft, intersectionResult2);
+
+            var resultColor = CalculateResultColor(directionVector, iterationsLeft, intersectionResult.Value);
 
             return new TraceRayResult(
-                intersectionResult2.IntersectedObject,
-                intersectionResult2.IntersectedPoint,
+                intersectionResult,
                 resultColor
             );
         }
@@ -143,7 +151,7 @@ namespace RayTracing2._0 {
         private VecColor CalculateResultColor(
             Vector3 directionVector,
             int iterationsLeft,
-            Intersectionresult intersectionResult
+            IntersectionResult intersectionResult
         ) {
             var (diffusedLight, primaryLight) = FindDiffusedAndPrimaryLight(
                             intersectionResult.IntersectedObject,
@@ -152,13 +160,15 @@ namespace RayTracing2._0 {
                             iterationsLeft
                         );
 
-            var reflectLight = intersectionResult.IntersectedObject.Material.ReflectCoef != 0
+            var reflectCoef = intersectionResult.IntersectedObject.Material.ReflectCoef;
+
+            var reflectLight = reflectCoef != 0
                 ? FindReflectLight(
                     intersectionResult.IntersectedPoint,
                     intersectionResult.NormalVector,
                     directionVector,
                     iterationsLeft
-                )
+                ) * reflectCoef
                 : VecColor.Empty;
 
             var refractedLight = intersectionResult.IntersectedObject.Material.AbsorptionCoefficient < 1
@@ -171,14 +181,11 @@ namespace RayTracing2._0 {
                     )
                 : VecColor.Empty;
 
-            var reflectCoef = intersectionResult.IntersectedObject.Material.ReflectCoef;
 
             var absorptionCoefficient = intersectionResult.IntersectedObject.Material.AbsorptionCoefficient;
 
-            var resultColor = reflectLight * reflectCoef
-                                + ((diffusedLight
-                                    + primaryLight
-                                    + GlobalLightningParameters.BackgroundLight) * (absorptionCoefficient)
+            var resultColor = reflectLight
+                                + ((diffusedLight + primaryLight + GlobalLightningParameters.BackgroundLight) * (absorptionCoefficient) * (1 - reflectCoef)
                                     + refractedLight * (1 - absorptionCoefficient)) * (1 - reflectCoef);
             return resultColor;
         }
@@ -206,30 +213,35 @@ namespace RayTracing2._0 {
             refractiveDirection = localDirection + vector3;
 
             var traceRayResult = TraceRay(intersectedPoint, refractiveDirection, iterationsLeft);
-            var lenghtToIntersectPoint = traceRayResult != null
-                ? Vector3.Distance(intersectedPoint, traceRayResult.IntersectedPoint)
+            var lenghtToIntersectPoint = traceRayResult.isSuccess
+                ? Vector3.Distance(intersectedPoint, traceRayResult.IntersectionResult.Value.IntersectedPoint)
                 : 0;
-            return VecColor.Intersection(traceRayResult?.ResultColor ?? VecColor.Empty, sceneObject.Material.Color)
+
+            return VecColor.Intersection(traceRayResult.ResultColor, sceneObject.Material.Color)
                    * Math.Pow(Math.E, -1 * sceneObject.Material.AbsorptionCoefficient * lenghtToIntersectPoint);
         }
 
-        private VecColor FindReflectLight(Vector3 intersectedPoint, Vector3 normalUnitVector,
-            Vector3 rayDirectionVector, int iterationsLeft) {
+        private VecColor FindReflectLight(
+            Vector3 intersectedPoint, 
+            Vector3 normalUnitVector,
+            Vector3 rayDirectionVector, 
+            int iterationsLeft
+        ) {
             var negativeRayDirection = -1 * rayDirectionVector;
             var reflectDirection = 2 * normalUnitVector * Vector3.Dot(normalUnitVector, negativeRayDirection) -
                                    negativeRayDirection;
             var rayTraceResult = TraceRay(intersectedPoint, reflectDirection, iterationsLeft);
 
-            if(rayTraceResult != null) {
-                var lenghtToIntersect = Vector3.Distance(intersectedPoint, rayTraceResult.IntersectedPoint);
+            if(rayTraceResult.isSuccess) {
+                var lenghtToIntersect = Vector3.Distance(intersectedPoint, rayTraceResult.IntersectionResult.Value.IntersectedPoint);
                 return rayTraceResult.ResultColor * Math.Pow(Math.E, -0.01 * lenghtToIntersect);
             }
 
-            return rayTraceResult?.ResultColor ?? VecColor.Empty/** Math.Pow(Math.E, -1)*/;
+            return rayTraceResult.ResultColor /** Math.Pow(Math.E, -1)*/;
         }
 
-        private Intersectionresult? TryGetTheClosestIntersectionWithTheScene(SearchParameters parameters) {
-            Intersectionresult? result = null;
+        private IntersectionResult? TryGetTheClosestIntersectionWithTheScene(SearchParameters parameters) {
+            IntersectionResult? result = null;
             var localMaximum = parameters.MaxRayCoefficient;
 
             foreach(var obj in _sceneObjects) {
@@ -237,7 +249,7 @@ namespace RayTracing2._0 {
                     if(IsValidLength(parameters.MinRayCoefficient, localMaximum, rayCoef.Item1)) {
                         localMaximum = rayCoef.Item1;
                         var normal = rayCoef.Item2;
-                        result = new Intersectionresult(obj, parameters.Ray.GetPointFromCoefficient(localMaximum), normal);
+                        result = new IntersectionResult(obj, parameters.Ray.GetPointFromCoefficient(localMaximum), normal);
                     }
                 }
             }
@@ -253,6 +265,7 @@ namespace RayTracing2._0 {
             Vector3 normalUnitVectorToPoint, int iterationsLeft) {
             var resultDiffused = VecColor.Empty;
             var resultPrimary = VecColor.Empty;
+
             foreach(var light in _lights) {
                 var direction = light.GetDirection(pointToObject);
                 var unitDirection = direction / direction.Length();
@@ -263,7 +276,7 @@ namespace RayTracing2._0 {
 
                 var traceResult = TraceRay(pointToObject, direction, iterationsLeft, maxRayCoefficient: 1);
                 VecColor lightColor;
-                if(traceResult != null) {
+                if(traceResult.isSuccess) {
                     lightColor = traceResult.ResultColor;
                 } else {
                     lightColor = light.Color * light.Intensity;

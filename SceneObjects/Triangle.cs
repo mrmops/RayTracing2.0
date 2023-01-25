@@ -22,7 +22,7 @@ namespace RayTracing2._0.SceneObjects
             _e2 = C - A;
         }
 
-        public bool FindIntersectedRayCoefficients(Ray ray, out double t)
+        public bool FindIntersectedRayCoefficients(Ray ray, out float t)
         {
             t = 0;
             var pVec = Vector3.Cross(ray.Direction, _e2);

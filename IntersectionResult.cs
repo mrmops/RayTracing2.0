@@ -1,19 +1,15 @@
-using System.Drawing;
-using System.Numerics;
+﻿using System.Numerics;
 
-namespace RayTracing2._0
-{
-    public class TraceRayResult
-    {
+namespace RayTracing2._0 {
+    public struct IntersectionResult {
         public ISceneObject IntersectedObject;
         public Vector3 IntersectedPoint;
-        public VecColor ResultColor;
+        public Vector3 NormalVector;
 
-        public TraceRayResult(ISceneObject intersectedObject, Vector3 intersectedPoint, VecColor resultColor)
-        {
+        public IntersectionResult(ISceneObject intersectedObject, Vector3 intersectedPoint, Vector3 normalVector) {
             IntersectedObject = intersectedObject;
             IntersectedPoint = intersectedPoint;
-            ResultColor = resultColor;
+            NormalVector = normalVector;
         }
     }
 }

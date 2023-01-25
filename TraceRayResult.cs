@@ -3,17 +3,20 @@ using System.Numerics;
 
 namespace RayTracing2._0
 {
-    public struct Intersectionresult
+    public class TraceRayResult
     {
-        public ISceneObject IntersectedObject;
-        public Vector3 IntersectedPoint;
-        public Vector3 NormalVector;
+        public readonly IntersectionResult? IntersectionResult;
+        public readonly VecColor ResultColor;
 
-        public Intersectionresult(ISceneObject intersectedObject, Vector3 intersectedPoint, Vector3 normalVector)
-        {
-            IntersectedObject = intersectedObject;
-            IntersectedPoint = intersectedPoint;
-            NormalVector = normalVector;
+        public bool isSuccess => IntersectionResult.HasValue;
+
+        public TraceRayResult(IntersectionResult? intersectionResult, VecColor resultColor) {
+            IntersectionResult = intersectionResult;
+            ResultColor = resultColor;
+        }
+
+        public static TraceRayResult Fail() {
+            return new TraceRayResult(null, VecColor.FromColor(Color.SkyBlue));
         }
     }
 }
