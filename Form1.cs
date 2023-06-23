@@ -351,12 +351,12 @@ namespace RayTracing2._0 {
                     }
 
                 case Keys.Space: {
-                        _scene.CameraPosition = Vector3.Transform(new Vector3(0, d, 0), _scene.RotationMatrix) + camera;
+                        _scene.CameraPosition = new Vector3(0, d, 0) + camera;
                         return;
                     }
 
                 case Keys.ShiftKey: {
-                        _scene.CameraPosition = Vector3.Transform(new Vector3(0, -d, 0), _scene.RotationMatrix) + camera;
+                        _scene.CameraPosition = new Vector3(0, -d, 0) + camera;
                         return;
                     }
             }

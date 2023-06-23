@@ -31,24 +31,25 @@ namespace RayTracing2._0
         {
             var oc = ray.StartPoint - Center;
 
-            var k1 = ray.DirectionDot;
-            var k2 = 2 * Vector3.Dot(oc, ray.Direction);
-            var k3 = Vector3.Dot(oc, oc) - _squareRadius;
+            var a = ray.DirectionDot;
+            var b = 2 * Vector3.Dot(oc, ray.Direction);
+            var c = Vector3.Dot(oc, oc) - _squareRadius;
 
-            var discriminant = k2 * k2 - 4 * k1 * k3;
+            var discriminant = b * b - 4 * a * c;
             if (discriminant < 0)
             {
                 yield break;
             }
 
-            var k12 = 2 * k1;
-            var minusK = -k2;
+            var doubleA = 2 * a;
+            var minusB = -b;
+            var rootOfDiscriminant = (float)Math.Sqrt(discriminant);
 
-            var findIntersectedRayCoefficients = (minusK + (float)Math.Sqrt(discriminant)) / k12;
-            yield return (findIntersectedRayCoefficients, GetNormalUnitVector(ray.GetPointFromCoefficient(findIntersectedRayCoefficients)));
+            var firstIntersectedRayCoefficient = (minusB + rootOfDiscriminant) / doubleA;
+            yield return (firstIntersectedRayCoefficient, GetNormalUnitVector(ray.GetPointFromCoefficient(firstIntersectedRayCoefficient)));
 
-            var intersectedRayCoefficients = (minusK - (float) Math.Sqrt(discriminant)) / k12;
-            yield return (intersectedRayCoefficients, GetNormalUnitVector(ray.GetPointFromCoefficient(intersectedRayCoefficients)));
+            var secondIntersectedRayCoefficient = (minusB - rootOfDiscriminant) / doubleA;
+            yield return (secondIntersectedRayCoefficient, GetNormalUnitVector(ray.GetPointFromCoefficient(secondIntersectedRayCoefficient)));
 
         }
     }

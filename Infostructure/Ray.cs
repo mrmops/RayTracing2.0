@@ -20,7 +20,7 @@ namespace RayTracing2._0
 
         public Vector3 GetPointFromCoefficient(float coefficient)
         {
-            return StartPoint + Vector3.Multiply(coefficient, (Direction));
+            return StartPoint + Vector3.Multiply(coefficient, Direction);
         }
 
         public override int GetHashCode()
