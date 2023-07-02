@@ -1,3 +1,6 @@
+using RayTracing2._0.Infostructure;
+using RayTracing2._0.SceneObjects;
+
 namespace RayTracing2._0
 {
     public class ReflectionLight

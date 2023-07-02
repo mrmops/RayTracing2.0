@@ -1,4 +1,5 @@
 using System.Numerics;
+using RayTracing2._0.Infostructure;
 
 namespace RayTracing2._0.SceneObjects
 {

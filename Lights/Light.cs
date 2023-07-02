@@ -1,6 +1,7 @@
 using System.Numerics;
+using RayTracing2._0.Infostructure;
 
-namespace RayTracing2._0
+namespace RayTracing2._0.Lights
 {
     public abstract class Light : ILight
     {

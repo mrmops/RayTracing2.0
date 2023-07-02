@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace RayTracing2._0
+namespace RayTracing2._0.Infostructure
 {
     public class Ray
     {
@@ -20,7 +20,7 @@ namespace RayTracing2._0
 
         public Vector3 GetPointFromCoefficient(float coefficient)
         {
-            return StartPoint + Vector3.Multiply(coefficient, Direction);
+            return StartPoint + coefficient * Direction;
         }
 
         public override int GetHashCode()

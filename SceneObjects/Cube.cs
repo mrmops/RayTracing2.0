@@ -1,20 +1,24 @@
-using RayTracing2._0.Material;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using RayTracing2._0.Infostructure;
+using RayTracing2._0.SceneObjects.Materials;
 
 namespace RayTracing2._0.SceneObjects
 {
     public class Cube : ISceneObject
     {
-        private Random random = new Random();
+        private Vector3 center;
         private List<Triangle> _triangles;
-        private Sphere container = new Sphere(new Vector3(0, 0, 0), Math.Sqrt(3), new EmptyMaterial());
+        private readonly Sphere _container;
 
-        public Cube(IMaterial material, int height)
+        public Cube(IMaterial material, int size, Vector3 center)
         {
             Material = material;
+            this.center = center;
+            _container = new Sphere(center, size * Math.Sqrt(3), new EmptyMaterial());
+            
             var vertexes = new List<Vector3>();
             for (int x = -1; x <= 1; x += 2)
             {
@@ -22,7 +26,7 @@ namespace RayTracing2._0.SceneObjects
                 {
                     for (int z = -1; z <= 1; z += 2)
                     {
-                        vertexes.Add(new Vector3(x, y, z));
+                        vertexes.Add(new Vector3(x, y, z) / 2 * size + center);
                     }
                 }
             }
@@ -61,7 +65,7 @@ namespace RayTracing2._0.SceneObjects
 
         public IEnumerable<(float, Vector3)> FindIntersectedRayCoefficients(Ray ray)
         {
-            if (!container.FindIntersectedRayCoefficients(ray).Any())
+            if (!_container.FindIntersectedRayCoefficients(ray).Any())
             {
                 yield break;
             }

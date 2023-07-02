@@ -1,6 +1,7 @@
 using System.Numerics;
+using RayTracing2._0.Infostructure;
 
-namespace RayTracing2._0
+namespace RayTracing2._0.Lights
 {
     public class DirectionLight : Light
     {
@@ -16,8 +17,7 @@ namespace RayTracing2._0
 
         public override SearchParameters GetSearchParametersForEclipsingObjects(Vector3 crossPoint)
         {
-            return new SearchParameters(new Ray(crossPoint, Direction), 0.001f,
-                float.PositiveInfinity);
+            return new SearchParameters(new Ray(crossPoint, Direction));
         }
 
         public override Vector3 GetDirection(Vector3 point)

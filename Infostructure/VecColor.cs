@@ -1,7 +1,7 @@
 using System;
 using System.Drawing;
 
-namespace RayTracing2._0
+namespace RayTracing2._0.Infostructure
 {
     public class VecColor
     {

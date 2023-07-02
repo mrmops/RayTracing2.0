@@ -1,21 +1,22 @@
-using RayTracing2._0.Material;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using RayTracing2._0.Infostructure;
+using RayTracing2._0.SceneObjects.Materials;
 
-namespace RayTracing2._0
+namespace RayTracing2._0.SceneObjects
 {
     public class Sphere : ISceneObject
     {
-        public Vector3 Center;
-        public double Radius;
+        private readonly Vector3 _center;
+        public readonly double Radius;
         private readonly double _squareRadius;
         public IMaterial Material { get; }
-        public Vector3 Location => Center;
+        public Vector3 Location => _center;
 
         public Sphere(Vector3 center, double radius, IMaterial material)
         {
-            Center = center;
+            _center = center;
             Radius = radius;
             Material = material;
             _squareRadius = Radius * Radius;
@@ -23,13 +24,13 @@ namespace RayTracing2._0
 
         public Vector3 GetNormalUnitVector(Vector3 crossPoint)
         {
-            var normalPoint = crossPoint - Center;
+            var normalPoint = crossPoint - _center;
             return Vector3.Normalize(normalPoint);
         }
 
         public IEnumerable<(float, Vector3)> FindIntersectedRayCoefficients(Ray ray)
         {
-            var oc = ray.StartPoint - Center;
+            var oc = ray.StartPoint - _center;
 
             var a = ray.DirectionDot;
             var b = 2 * Vector3.Dot(oc, ray.Direction);
@@ -43,14 +44,16 @@ namespace RayTracing2._0
 
             var doubleA = 2 * a;
             var minusB = -b;
-            var rootOfDiscriminant = (float)Math.Sqrt(discriminant);
+            var rootOfDiscriminant = Math.Sqrt(discriminant);
 
-            var firstIntersectedRayCoefficient = (minusB + rootOfDiscriminant) / doubleA;
-            yield return (firstIntersectedRayCoefficient, GetNormalUnitVector(ray.GetPointFromCoefficient(firstIntersectedRayCoefficient)));
+            yield return _findIntersectionResult((float)(minusB + rootOfDiscriminant) / doubleA, ray);
 
-            var secondIntersectedRayCoefficient = (minusB - rootOfDiscriminant) / doubleA;
-            yield return (secondIntersectedRayCoefficient, GetNormalUnitVector(ray.GetPointFromCoefficient(secondIntersectedRayCoefficient)));
+            yield return _findIntersectionResult((float)(minusB - rootOfDiscriminant) / doubleA, ray);
+        }
 
+        private (float, Vector3) _findIntersectionResult(float rayIntersectionCoef, Ray ray)
+        {
+            return (rayIntersectionCoef, GetNormalUnitVector(ray.GetPointFromCoefficient(rayIntersectionCoef)));
         }
     }
 }

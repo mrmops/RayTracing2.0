@@ -1,11 +1,11 @@
-namespace RayTracing2._0
+namespace RayTracing2._0.Infostructure
 {
     public class SearchParameters
     {
-        public Ray Ray { get; private set; }
+        public Ray Ray { get; }
 
-        public float MinRayCoefficient { get; private set; }
-        public float MaxRayCoefficient { get; private set; }
+        public float MinRayCoefficient { get; }
+        public float MaxRayCoefficient { get; }
 
         public SearchParameters(Ray ray, float minRayCoefficient = 0.001f, float maxRayCoefficient = float.PositiveInfinity)
         {

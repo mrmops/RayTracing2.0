@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Numerics;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Timer = System.Windows.Forms.Timer;
 
@@ -47,7 +48,8 @@ namespace RayTracing2._0 {
 
 
 
-            _ = _scene.GetFrame(newCanvasSize, fragmentsCount).ContinueWith(task => {
+
+            _scene.GetFrame(newCanvasSize).ContinueWith(task => {
                 UpdateFrame();
                 // var canvas = new Bitmap(newCanvasSize.Width, newCanvasSize.Height);
                 // var fragments = task.Result;
