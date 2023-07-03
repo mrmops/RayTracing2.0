@@ -1,17 +1,16 @@
 using RayTracing2._0.Infostructure;
 
-namespace RayTracing2._0.SceneObjects.Materials
+namespace RayTracing2._0.SceneObjects.Materials;
+
+public interface IMaterial
 {
-    public interface IMaterial
-    {
-        VecColor Color { get; }
+    VecColor Color { get; }
 
-        double ReflectCoef { get; }
+    double ReflectCoef { get; }
 
-        double SpecularCoef { get; }
+    double SpecularCoef { get; }
 
-        double RefractiveCoef { get; }
+    double RefractiveCoef { get; }
 
-        double AbsorptionCoefficient { get; }
-    }
+    double AbsorptionCoefficient { get; }
 }

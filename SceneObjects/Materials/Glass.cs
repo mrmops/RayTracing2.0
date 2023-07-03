@@ -1,20 +1,19 @@
 using RayTracing2._0.Infostructure;
 
-namespace RayTracing2._0.SceneObjects.Materials
-{
-    public class Glass : IMaterial
-    {
-        public VecColor Color { get; }
-        public double ReflectCoef => 0;
-        public double SpecularCoef { get; }
-        public double RefractiveCoef => 1.57;
-        public double AbsorptionCoefficient { get; }
+namespace RayTracing2._0.SceneObjects.Materials;
 
-        public Glass(VecColor color, double specularCoef, double absorptionCoefficient)
-        {
-            Color = color;
-            SpecularCoef = specularCoef;
-            AbsorptionCoefficient = absorptionCoefficient;
-        }
+public class Glass : IMaterial
+{
+    public VecColor Color { get; }
+    public double ReflectCoef => 0;
+    public double SpecularCoef { get; }
+    public double RefractiveCoef => 1.57;
+    public double AbsorptionCoefficient { get; }
+
+    public Glass(VecColor color, double specularCoef, double absorptionCoefficient)
+    {
+        Color = color;
+        SpecularCoef = specularCoef;
+        AbsorptionCoefficient = absorptionCoefficient;
     }
 }
