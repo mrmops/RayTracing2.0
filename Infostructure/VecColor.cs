@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace RayTracing2._0.Infostructure;
 
@@ -41,6 +42,11 @@ public class VecColor
     public Color ToColor()
     {
         return Color.FromArgb(255, _r, _g, _b);
+    }
+    
+    public static VecColor FromRgba(Rgba32 color)
+    {
+        return new VecColor(color.R, color.G, color.B);
     }
 
     public static VecColor FromColor(Color color)

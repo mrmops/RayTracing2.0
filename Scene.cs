@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using RayTracing2._0.Infostructure;
 using RayTracing2._0.Lights;
 using RayTracing2._0.SceneObjects.Materials;
+using RayTracing2._0.SceneObjects.Materials.Models;
 using RayTracing2._0.SceneObjects.Objects;
 using RayTracing2._0.SceneObjects.Objects.Spheres;
 using RayTracing2._0.Utils.Extensions;
@@ -20,26 +21,84 @@ public class Scene
 {
     private List<ISceneObject> _sceneObjects = new()
     {
-        new Sphere(new Vector3(0, -1, 2), 1,
+        new Sphere(
+            new Vector3(0, -1, 2),
+            1,
             new CustomMaterial(VecColor.FromColor(Color.Blue),
-                0.3, 500, 2.5, 0.5)),
+                0.3,
+                500,
+                2.5,
+                0.5
+            )
+        ),
         new Lens(
-            /*new CustomMaterial(VecColor.FromColor(Color.Yellow), 0, 100, 0,
-                1)*/ new Glass(VecColor.FromColor(Color.Pink), 100, 0), new Vector3(0, 0, 7), 1),
+            new Glass(
+                VecColor.FromColor(Color.Green),
+                100,
+                0
+            ),
+            new Vector3(0, 0, 7),
+            1
+        ),
 
-        new Sphere(new Vector3(-2, 0, 4), 1,
-            new Glass(VecColor.FromColor(Color.Red), 50, 0.02)),
+        new Sphere(
+            new Vector3(-2, 0, 4),
+            1,
+            new Glass(VecColor.FromColor(Color.Red),
+                50,
+                0.02
+            )
+        ),
 
-        new Cube(new Glass(VecColor.FromColor(Color.SlateGray /*Color.FromArgb(255, 110, 0 , 150)*/), 100, 0.05), 1,
-            new Vector3(0, 0.5f, 0)),
+        new Cube(
+            new TextureMaterial(
+                   "Textures/colors.tga",
+                   "Textures/normales.tga",
+                   "Textures/parameters2.tga"
+                ),
+            // new Glass(
+            //     VecColor.FromColor(Color.SlateGray),
+            //     100,
+            //     0.05
+            // ),
+            1,
+            new Vector3(0f, 0.5f, 0)
+        ),
 
-        new Prism(2, new CustomMaterial(VecColor.FromColor(Color.Blue), 0, 100, 0, 1)),
+        // new Prism(
+        //     2,
+        //     new CustomMaterial(
+        //         VecColor.FromColor(Color.Blue),
+        //         0,
+        //         100,
+        //         0,
+        //         1
+        //     )
+        // ),
 
-        new Sphere(new Vector3(2, 0, 4), 1,
-            new CustomMaterial(VecColor.FromColor(Color.Green), 1, 500, 0, 1)),
+        new Sphere(
+            new Vector3(2, 0, 4),
+            1,
+            new CustomMaterial(
+                VecColor.FromColor(Color.Green),
+                1,
+                500,
+                0,
+                1
+            )
+        ),
 
-        new Sphere(new Vector3(0, -5001, 0), 5000,
-            new CustomMaterial(VecColor.FromColor(Color.Yellow), 0, 100, 0, 1)),
+        new Sphere(
+            new Vector3(0, -5001, 0),
+            5000,
+            new CustomMaterial(
+                VecColor.FromColor(Color.Yellow),
+                0,
+                100,
+                0,
+                1
+            )
+        ),
     };
 
     public Vector3 CameraPosition = new(0, 0, 0);
@@ -50,6 +109,9 @@ public class Scene
     {
         new PointLight(new Vector3(1, 2, 6), VecColor.FromColor(Color.White), 0.6),
         new DirectionLight(new Vector3(0, 4, -7), VecColor.FromColor(Color.White), 0.4),
+        new DirectionLight(new Vector3(9, 4, -7), VecColor.FromColor(Color.White), 0.6),
+        new DirectionLight(new Vector3(-9, 4, -7), VecColor.FromColor(Color.White), 0.6),
+
     };
 
     public Task<List<KeyValuePair<Point, VecColor>>> GetFrame(Size frameSize)
@@ -92,7 +154,7 @@ public class Scene
                             rotationMatrix
                         );
 
-                    var result = TraceRay(camera, directionViewPortPosition, 4);
+                    var result = TraceRay(camera, directionViewPortPosition, 6);
 
                     if (result != null)
                     {
@@ -123,13 +185,13 @@ public class Scene
         );
     }
 
-    private TraceRayResult? TraceRay(
+    private TraceRayResult?  TraceRay(
         Vector3 rayStart,
         Vector3 directionVector,
         int iterationsLeft,
         float minRayCoefficient = 0.001f,
         float maxRayCoefficient = float.PositiveInfinity
-    )
+    )  
     {
         if (iterationsLeft == 0)
         {
@@ -162,32 +224,32 @@ public class Scene
         IntersectionResult intersectionResult
     )
     {
-        if (Math.Abs(intersectionResult.MaterialCoefficientData.ReflectCoefficient - 1) < 0.00000000000000000001)
+        if (Math.Abs(intersectionResult.MaterialData.Parameters.ReflectCoefficient - 1) < 0.00000000000000000001)
         {
             return FindReflectLight(
                 intersectionResult.IntersectedPoint,
-                intersectionResult.MaterialCoefficientData.Normal,
+                intersectionResult.MaterialData.Normal,
                 direction,
                 iterationsLeft
             );
         }
 
-        var reflectCoef = intersectionResult.MaterialCoefficientData.ReflectCoefficient;
+        var reflectCoef = intersectionResult.MaterialData.Parameters.ReflectCoefficient;
 
         var reflectedLight = reflectCoef > 0
             ? FindReflectLight(
                 intersectionResult.IntersectedPoint,
-                intersectionResult.MaterialCoefficientData.Normal,
+                intersectionResult.MaterialData.Normal,
                 direction,
                 iterationsLeft
             ) * reflectCoef
             : VecColor.Empty;
 
-        var absorptionCoefficient = intersectionResult.MaterialCoefficientData.AbsorptionCoefficient;
+        var absorptionCoefficient = intersectionResult.MaterialData.Parameters.AbsorptionCoefficient;
 
-        var refractedLight = intersectionResult.MaterialCoefficientData.AbsorptionCoefficient < 1
+        var refractedLight = intersectionResult.MaterialData.Parameters.AbsorptionCoefficient < 1
             ? FindRefractedLight(
-                intersectionResult.MaterialCoefficientData,
+                intersectionResult.MaterialData,
                 intersectionResult.IntersectedPoint,
                 Vector3.Normalize(direction),
                 iterationsLeft
@@ -196,9 +258,9 @@ public class Scene
 
         var (diffusedLight, primaryLight) = absorptionCoefficient > 0
             ? FindDiffusedAndPrimaryLight(
-                intersectionResult.MaterialCoefficientData,
+                intersectionResult.MaterialData,
                 intersectionResult.IntersectedPoint,
-                intersectionResult.MaterialCoefficientData.Normal,
+                intersectionResult.MaterialData.Normal,
                 iterationsLeft
             )
             : (VecColor.Empty, VecColor.Empty);
@@ -212,13 +274,13 @@ public class Scene
     }
 
     private VecColor FindRefractedLight(
-        MaterialCoefficientData materialData,
+        MaterialData materialData,
         Vector3 intersectedPoint,
         Vector3 rayDirectionVector,
         int iterationsLeft)
     {
         var localDirection = rayDirectionVector;
-        var refractiveCoef = materialData.RefractiveCoefficient;
+        var refractiveCoef = materialData.Parameters.RefractiveCoefficient;
         var dotProduct = Vector3.Dot(localDirection, materialData.Normal);
 
         if (dotProduct > 0)
@@ -245,7 +307,7 @@ public class Scene
 
         return VecColor.Intersection(traceRayResult?.ResultColor ?? VecColor.FromColor(Color.SkyBlue),
                    materialData.Color)
-               * Math.Pow(Math.E, -1 * materialData.AbsorptionCoefficient * lenghtToIntersectPoint);
+               * Math.Pow(Math.E, -1 * materialData.Parameters.AbsorptionCoefficient * lenghtToIntersectPoint);
     }
 
     private VecColor FindReflectLight(
@@ -303,7 +365,7 @@ public class Scene
     }
 
     private (VecColor, VecColor) FindDiffusedAndPrimaryLight(
-        MaterialCoefficientData materialData,
+        MaterialData materialData,
         Vector3 pointToObject,
         Vector3 normalUnitVectorToPoint,
         int iterationsLeft
@@ -334,7 +396,7 @@ public class Scene
             else
             {
                 lightColor = light.Color * light.Intensity;
-                resultPrimary += lightColor * Math.Pow(cos, materialData.SpecularCoefficient);
+                resultPrimary += lightColor * Math.Pow(cos, materialData.Parameters.SpecularCoefficient);
             }
 
             resultDiffused += lightColor * cos;
