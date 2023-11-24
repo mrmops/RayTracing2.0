@@ -4,7 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace RayTracing2._0.Infostructure;
 
-public class VecColor
+public struct VecColor
 {
     private int R
     {

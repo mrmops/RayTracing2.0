@@ -1,6 +1,6 @@
 namespace RayTracing2._0.Infostructure;
 
-public class SearchParameters
+public struct SearchParameters
 {
     public Ray Ray { get; }
 

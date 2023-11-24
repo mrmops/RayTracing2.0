@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace RayTracing2._0.Infostructure;
 
-public class Ray
+public struct Ray
 {
     public Vector3 StartPoint { get; }
     public Vector3 Direction { get; }

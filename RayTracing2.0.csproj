@@ -37,9 +37,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Remove="Textures\normales.tga" />
-    <Content Include="Textures\normales.tga">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Textures\parameters.tga" />
     <Content Include="Textures\parameters.tga">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
